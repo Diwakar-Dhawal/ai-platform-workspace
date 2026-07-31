@@ -1,0 +1,348 @@
+AI Platform Workspace (Current Architecture)
+Vision
+
+This repository is not a YouTube project.
+
+It is an AI Platform capable of hosting multiple AI-powered applications.
+
+Applications are independent products.
+
+Platform services are shared infrastructure.
+
+AI Platform Workspace
+│
+├── Platform Services (Reusable)
+│      Identity
+│      AI Platform
+│      Chat Platform
+│
+└── Applications
+       InsightTube
+       Future Apps
+          InstaMind
+          PDFMind
+          WebsiteMind
+Repository Structure
+ai-platform-workspace/
+
+applications/
+    insighttube/
+        gateway/
+        tube-service/
+        frontend/
+
+platform/
+    identity-service/
+    chat-service/
+    ai-platform/
+
+docs/
+docker/
+Layer Separation
+Platform
+
+Contains reusable services.
+
+They should never know anything about InsightTube.
+
+Current platform services:
+
+identity-service
+chat-service
+ai-platform
+
+Future platform services may include
+
+notification-service
+file-service
+analytics-service
+Applications
+
+Each application consumes platform services.
+
+Current application:
+
+InsightTube
+
+Future:
+
+PDFMind
+WebsiteMind
+InstaMind
+
+Each application owns its own business logic.
+
+InsightTube Architecture
+Frontend
+
+↓
+
+InsightTube Gateway
+
+↓
+
+Tube Service
+
+↓
+
+Platform Services
+
+Notice
+
+Identity Service is not inside InsightTube.
+
+It belongs to the platform.
+
+Gateway Strategy
+
+This is one of the biggest architectural decisions.
+
+Every application owns its own gateway.
+
+Example
+
+applications
+
+    insighttube
+        gateway
+
+    pdfmind
+        gateway
+
+    instamind
+        gateway
+
+Each gateway is responsible for
+
+Routing
+CORS
+JWT verification
+Logging
+Rate limiting
+Reverse proxy
+API aggregation
+
+Applications remain isolated.
+
+Current Services
+Platform
+Identity Service
+
+Status:
+
+✔ Spring Boot project created
+
+Current packages
+
+config
+controller
+dto
+entity
+enums
+exception
+mapper
+repository
+security
+service
+validation
+util
+
+Implemented
+
+Health endpoint
+Layered architecture
+DTO
+Service
+Enum
+Response object
+
+Next responsibilities
+
+Register
+Login
+Refresh Token
+JWT
+Roles
+Clients
+OAuth concepts
+Chat Service
+
+Status
+
+Folder created
+
+No implementation yet
+AI Platform
+
+Status
+
+Folder created
+
+No implementation yet
+
+This will become
+
+Chat Engine
+
+Embedding Engine
+
+Prompt Engine
+
+Vector Search
+
+LLM Providers
+
+RAG
+
+Memory
+
+It must remain completely generic.
+
+No YouTube knowledge.
+
+InsightTube
+Gateway
+
+Status
+
+✔ Spring Boot application
+
+Implemented
+
+Starts successfully
+Health endpoint accessible
+Basic gateway functionality verified
+
+Later
+
+Route to Tube Service
+Route to Identity Service
+JWT validation
+Rate limiting
+Request logging
+Tube Service
+
+Status
+
+Folder only
+
+Future responsibilities
+
+Channels
+Videos
+Metadata
+Playlists
+Transcript requests
+Frontend
+
+Status
+
+Folder only
+
+Future
+
+React + TypeScript + Vite
+
+Communication
+React
+
+↓
+
+InsightTube Gateway
+
+↓
+
+Tube Service
+
+↓
+
+Platform Services
+
+Example login
+
+Frontend
+
+↓
+
+InsightTube Gateway
+
+↓
+
+Identity Service
+
+↓
+
+PostgreSQL
+
+Example AI Chat
+
+Frontend
+
+↓
+
+InsightTube Gateway
+
+↓
+
+Tube Service
+
+↓
+
+Chat Service
+
+↓
+
+AI Platform
+
+↓
+
+Gemini
+Current Progress
+Workspace
+✅ Repository structure finalized
+✅ Documentation structure created
+✅ Docker compose at workspace root
+Platform
+✅ Identity Service created
+✅ Health endpoint implemented
+✅ PostgreSQL connection working
+✅ Spring Boot starts successfully
+✅ Timezone issue resolved (UTC JVM configuration)
+InsightTube
+✅ Gateway created
+✅ Health API working
+Remaining
+⏳ Tube Service
+⏳ Frontend
+⏳ Chat Service
+⏳ AI Platform
+Development Principles
+Platform services never depend on applications.
+Applications consume platform services.
+Every application has its own gateway.
+Every service owns its own database.
+No shared Java utility library between services.
+Communication through HTTP initially.
+Event-driven architecture (RabbitMQ/Kafka) later.
+AI Platform remains domain-agnostic.
+Applications contain business logic; AI Platform contains AI capabilities.
+Every service can be deployed independently.
+Current Milestone
+
+We are still in Phase 1 – Foundation.
+
+Completed:
+
+Workspace structure
+InsightTube Gateway
+Identity Service skeleton
+Health APIs
+PostgreSQL integration
+Docker setup
+Project architecture
+
+Next milestone:
+
+Implement the Identity Service (registration, login, JWT, refresh tokens, security configuration) before moving on to the Tube Service.
+
+From now on, I'll use this architecture as the reference for all recommendations unless you explicitly change the design.

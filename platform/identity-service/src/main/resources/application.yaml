@@ -2,6 +2,16 @@ spring:
   application:
     name: identity-service
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/insighttube?options=-c%20TimeZone=UTC
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
 application:
   version: 0.0.1
 
