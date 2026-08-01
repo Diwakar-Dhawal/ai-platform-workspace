@@ -1,11 +1,10 @@
 package com.aiservice.platform.identity.exception;
 
+import com.aiservice.platform.identity.enums.ErrorCode;
+
 public class UserNotFoundException extends ApiException {
 
-    public UserNotFoundException() {
-        super(
-                "USER_NOT_FOUND",
-                "User does not exist."
-        );
+    public UserNotFoundException(String message) {
+        super(ErrorCode.USER_NOT_FOUND, message);
     }
 }

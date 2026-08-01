@@ -1,11 +1,10 @@
 package com.aiservice.platform.identity.exception;
 
+import com.aiservice.platform.identity.enums.ErrorCode;
+
 public class UnauthorizedException extends ApiException {
 
-    public UnauthorizedException() {
-        super(
-                "UNAUTHORIZED",
-                "Authentication is required."
-        );
+    public UnauthorizedException(ErrorCode errorCode, String message ) {
+        super(errorCode, message);
     }
 }

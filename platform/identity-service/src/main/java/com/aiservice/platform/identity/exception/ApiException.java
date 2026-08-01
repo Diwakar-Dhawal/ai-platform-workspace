@@ -1,13 +1,14 @@
 package com.aiservice.platform.identity.exception;
 
+import com.aiservice.platform.identity.enums.ErrorCode;
 import lombok.Getter;
 
 @Getter
 public abstract class ApiException extends RuntimeException {
 
-    private final String errorCode;
+    private final ErrorCode errorCode;
 
-    protected ApiException(String errorCode, String message) {
+    protected ApiException(ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = errorCode;
     }

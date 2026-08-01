@@ -1,4 +1,9 @@
 package com.aiservice.platform.identity.exception;
 
-public class BadRequestException {
+import com.aiservice.platform.identity.enums.ErrorCode;
+
+public class BadRequestException extends ApiException {
+    public BadRequestException(ErrorCode code, String message) {
+        super(code, message);
+    }
 }

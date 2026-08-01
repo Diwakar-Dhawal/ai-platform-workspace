@@ -15,6 +15,12 @@ spring:
 application:
   version: 0.0.1
 
+jwt:
+  secret: your-super-secret-key-which-is-at-least-32-bytes-long
+  access-token-expiration: 900000        # 15 min
+  refresh-token-expiration: 604800000    # 7 days
+  issuer: identity-service
+
 server:
   port: 8081
   servlet:

@@ -2,12 +2,16 @@ package com.aiservice.platform.identity.exception;
 
 import com.aiservice.platform.identity.dto.response.ApiResponse;
 import com.aiservice.platform.identity.dto.response.ErrorResponse;
+import com.aiservice.platform.identity.dto.response.WarningResponse;
 import com.aiservice.platform.identity.enums.ErrorCode;
 import com.aiservice.platform.identity.enums.ResponseStatus;
+import com.aiservice.platform.identity.enums.WarningCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.validation.FieldError;
 
 import java.util.List;
 
@@ -65,20 +69,17 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneric(
-            Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(
-                        new ApiResponse<>(
-                                ResponseStatus.FAILED,
-                                "Something went wrong.",
-                                null,
+                        ApiResponse.failure(
+                                "Internal Server Error",
                                 new ErrorResponse(
                                         ErrorCode.INTERNAL_SERVER_ERROR,
                                         ex.getMessage()
-                                ),
-                                List.of()
+                                )
                         )
                 );
     }
@@ -87,18 +88,50 @@ public class GlobalExceptionHandler {
             HttpStatus status,
             ApiException ex) {
 
-        return ResponseEntity.status(status)
+        return ResponseEntity
+                .status(status)
+                .body(
+                        ApiResponse.failure(
+                                ex.getMessage(),
+                                new ErrorResponse(
+                                        ex.getErrorCode(),
+                                        ex.getMessage()
+                                )
+                        )
+                );
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex) {
+
+        List<WarningResponse> warnings = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(this::toWarning)
+                .toList();
+
+        return ResponseEntity.badRequest()
                 .body(
                         new ApiResponse<>(
                                 ResponseStatus.FAILED,
-                                ex.getMessage(),
+                                "Validation failed",
                                 null,
                                 new ErrorResponse(
-                                       ErrorCode.ACCESS_DENIED,
-                                        ex.getMessage()
+                                        ErrorCode.VALIDATION_ERROR,
+                                        "One or more request fields are invalid."
                                 ),
-                                List.of()
+                                warnings
                         )
                 );
+    }
+
+    private WarningResponse toWarning(FieldError error) {
+
+        return new WarningResponse(
+                WarningCode.VALIDATION_ERROR,
+                error.getField(),
+                error.getDefaultMessage()
+        );
     }
 }
