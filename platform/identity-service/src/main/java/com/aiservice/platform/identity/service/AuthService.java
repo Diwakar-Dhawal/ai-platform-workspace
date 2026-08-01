@@ -17,5 +17,5 @@ public interface AuthService {
 
     void logout(RefreshTokenRequest request);
 
-    void logoutAll(String userId);
+    void logoutAll();
 }

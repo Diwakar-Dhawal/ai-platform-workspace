@@ -1,7 +1,6 @@
 package com.aiservice.platform.identity.bootstrap;
 
 import com.aiservice.platform.identity.entity.Role;
-import com.aiservice.platform.identity.enums.RoleName;
 import com.aiservice.platform.identity.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -16,14 +15,14 @@ public class RoleDataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
 
-        createRole(RoleName.USER, "Default application user");
+        createRole("USER", "Default application user");
 
-        createRole(RoleName.MANAGER, "Application manager");
+        createRole("MANAGER", "Application manager");
 
-        createRole(RoleName.ADMIN, "Application administrator");
+        createRole("ADMIN", "Application administrator");
     }
 
-    private void createRole(RoleName roleName, String description) {
+    private void createRole(String roleName, String description) {
 
         if (roleRepository.existsByName(roleName)) {
             return;

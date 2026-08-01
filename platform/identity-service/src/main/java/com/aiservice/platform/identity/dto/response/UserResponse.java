@@ -1,6 +1,5 @@
 package com.aiservice.platform.identity.dto.response;
 
-import com.aiservice.platform.identity.enums.RoleName;
 import com.aiservice.platform.identity.enums.UserStatus;
 
 import java.time.Instant;
@@ -19,7 +18,7 @@ public record UserResponse(
 
         Boolean emailVerified,
 
-        Set<RoleName> roles,
+        Set<String> roles,
 
         Instant createdAt
 

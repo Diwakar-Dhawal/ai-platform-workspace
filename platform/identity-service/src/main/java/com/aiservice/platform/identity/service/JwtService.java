@@ -2,7 +2,6 @@ package com.aiservice.platform.identity.service;
 
 import com.aiservice.platform.identity.entity.Client;
 import com.aiservice.platform.identity.entity.User;
-import com.aiservice.platform.identity.enums.RoleName;
 import com.aiservice.platform.identity.enums.TokenType;
 import io.jsonwebtoken.Claims;
 
@@ -25,7 +24,7 @@ public interface JwtService {
 
     String extractClientId(String token);
 
-    Set<RoleName> extractRoles(String token);
+    Set<String> extractRoles(String token);
 
     Instant extractIssuedAt(String token);
 

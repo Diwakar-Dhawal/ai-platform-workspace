@@ -1,7 +1,6 @@
 package com.aiservice.platform.identity.repository;
 
 import com.aiservice.platform.identity.entity.Role;
-import com.aiservice.platform.identity.enums.RoleName;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,7 +11,7 @@ import java.util.UUID;
 
 public interface RoleRepository extends JpaRepository<Role, UUID> {
 
-    Optional<Role> findByName(RoleName name);
+    Optional<Role> findByName(String name);
 
-    boolean existsByName(RoleName name);
+    boolean existsByName(String name);
 }

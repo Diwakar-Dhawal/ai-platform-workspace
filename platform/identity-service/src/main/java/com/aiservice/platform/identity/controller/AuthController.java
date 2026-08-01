@@ -71,9 +71,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout-all")
-    public ResponseEntity<ApiResponse<AuthResponse>> logoutAll(@Valid @RequestParam String userId)
+    public ResponseEntity<ApiResponse<AuthResponse>> logoutAll()
     {
-        authService.logoutAll(userId);
+        authService.logoutAll();
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Logged out from everywhere",

@@ -1,6 +1,5 @@
 package com.aiservice.platform.identity.entity;
 
-import com.aiservice.platform.identity.enums.RoleName;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -17,9 +16,9 @@ import java.util.Set;
 @EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 public class Role extends BaseEntity{
 
-    @Enumerated(EnumType.STRING)
+
     @Column(nullable = false, unique = true)
-    private RoleName name;
+    private String name;
 
     @Column(nullable = false, length = 255)
     private String description;

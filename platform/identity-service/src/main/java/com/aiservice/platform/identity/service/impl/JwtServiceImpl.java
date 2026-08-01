@@ -2,7 +2,6 @@ package com.aiservice.platform.identity.service.impl;
 
 import com.aiservice.platform.identity.entity.Client;
 import com.aiservice.platform.identity.entity.User;
-import com.aiservice.platform.identity.enums.RoleName;
 import com.aiservice.platform.identity.enums.TokenType;
 import com.aiservice.platform.identity.service.JwtService;
 import com.aiservice.platform.identity.util.JwtClaims;
@@ -110,13 +109,12 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public Set<RoleName> extractRoles(String token) {
+    public Set<String> extractRoles(String token) {
 
         List<String> roles = extractClaims(token)
                 .get(JwtClaims.ROLES, List.class);
 
         return roles.stream()
-                .map(RoleName::valueOf)
                 .collect(java.util.stream.Collectors.toSet());
     }
 

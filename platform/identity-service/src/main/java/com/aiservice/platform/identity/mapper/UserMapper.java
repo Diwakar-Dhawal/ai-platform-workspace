@@ -2,7 +2,6 @@ package com.aiservice.platform.identity.mapper;
 
 import com.aiservice.platform.identity.dto.response.UserResponse;
 import com.aiservice.platform.identity.entity.User;
-import com.aiservice.platform.identity.enums.RoleName;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -16,7 +15,7 @@ public final class UserMapper {
 
     public static UserResponse toResponse(User user) {
 
-        Set<RoleName> roles =
+        Set<String> roles =
                 user.getUserClientRoles()
                         .stream()
                         .map(userRole -> userRole.getRole().getName())

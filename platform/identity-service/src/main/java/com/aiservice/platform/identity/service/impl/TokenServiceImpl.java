@@ -1,10 +1,7 @@
 package com.aiservice.platform.identity.service.impl;
 
 import com.aiservice.platform.identity.dto.response.AuthResponse;
-import com.aiservice.platform.identity.entity.Client;
-import com.aiservice.platform.identity.entity.RefreshToken;
-import com.aiservice.platform.identity.entity.User;
-import com.aiservice.platform.identity.entity.UserClientRole;
+import com.aiservice.platform.identity.entity.*;
 import com.aiservice.platform.identity.enums.ErrorCode;
 import com.aiservice.platform.identity.exception.UnauthorizedException;
 import com.aiservice.platform.identity.mapper.UserMapper;
@@ -66,7 +63,7 @@ public class TokenServiceImpl implements TokenService {
 
         Set<String> roles = mappings.stream()
                 .map(UserClientRole::getRole)
-                .map(role -> role.getName().name())
+                .map(Role::getName)
                 .collect(Collectors.toSet());
 
         String refreshTokenValue = tokenGenerator.generateRefreshToken();

@@ -56,11 +56,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // validates signature + expiration
             jwtService.extractClaims(token);
 
-            if (jwtService.extractTokenType(token) != TokenType.ACCESS) {
+            TokenType tokenType = jwtService.extractTokenType(token);
+
+            if (tokenType != TokenType.ACCESS) {
                 throw new JwtException("Invalid token type");
             }
 
-            String username =
+                String username =
                     jwtService.extractUsername(token);
 
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -78,10 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Set<SimpleGrantedAuthority> authorities =
                         jwtService.extractRoles(token)
                                 .stream()
-                                .map(role ->
-                                        new SimpleGrantedAuthority(
-                                                "ROLE_" + role.name()
-                                        ))
+                                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                                 .collect(Collectors.toSet());
 
                 UsernamePasswordAuthenticationToken authentication =

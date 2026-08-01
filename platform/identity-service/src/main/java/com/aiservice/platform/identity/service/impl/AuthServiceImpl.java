@@ -9,16 +9,18 @@ import com.aiservice.platform.identity.entity.Role;
 import com.aiservice.platform.identity.entity.User;
 import com.aiservice.platform.identity.entity.UserClientRole;
 import com.aiservice.platform.identity.enums.ErrorCode;
-import com.aiservice.platform.identity.enums.RoleName;
 import com.aiservice.platform.identity.enums.UserStatus;
 import com.aiservice.platform.identity.exception.BadRequestException;
 import com.aiservice.platform.identity.exception.DuplicateResourceException;
 import com.aiservice.platform.identity.exception.UnauthorizedException;
 import com.aiservice.platform.identity.repository.*;
+import com.aiservice.platform.identity.security.CustomUserDetails;
 import com.aiservice.platform.identity.service.AuthService;
 import com.aiservice.platform.identity.service.TokenService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +35,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final ClientRepository clientRepository;
-    private static final RoleName DEFAULT_ROLE = RoleName.USER;
+    private static final String DEFAULT_ROLE = "USER";
     private final TokenService tokenService;
     private final UserClientRoleRepository userClientRoleRepository;
 
@@ -119,17 +121,16 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logoutAll(String userId) {
+    public void logoutAll() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
 
-        User user = userRepository.findById(UUID.fromString(userId))
-                .orElseThrow(() ->
-                        new UnauthorizedException(
-                                ErrorCode.USER_NOT_FOUND,
-                                "User not found"
-                        )
-                );
+        assert authentication != null;
+        CustomUserDetails user =
+                (CustomUserDetails) authentication.getPrincipal();
 
-        tokenService.logoutAll(user.getId());
+        assert user != null;
+        tokenService.logoutAll(user.getUserId());
     }
 
 
