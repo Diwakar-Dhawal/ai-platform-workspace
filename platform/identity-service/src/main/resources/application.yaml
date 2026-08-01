@@ -2,21 +2,20 @@ spring:
   application:
     name: identity-service
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/insighttube?options=-c%20TimeZone=UTC
-    username: postgres
-    password: postgres
-
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    clean-disabled: true
 
 application:
   version: 0.0.1
 
 jwt:
-  secret: your-super-secret-key-which-is-at-least-32-bytes-long
   access-token-expiration: 900000        # 15 min
   refresh-token-expiration: 604800000    # 7 days
   issuer: identity-service
