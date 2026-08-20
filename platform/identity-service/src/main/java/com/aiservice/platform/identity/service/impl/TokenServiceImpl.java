@@ -13,6 +13,7 @@ import com.aiservice.platform.identity.service.JwtService;
 import com.aiservice.platform.identity.service.TokenService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -33,8 +35,6 @@ public class TokenServiceImpl implements TokenService {
     private final RefreshTokenRepository refreshTokenRepository;
 
     private final UserClientRoleRepository userClientRoleRepository;
-
-    private final UserMapper userMapper;
 
     private final UserRepository userRepository;
 
@@ -55,6 +55,7 @@ public class TokenServiceImpl implements TokenService {
                 );
 
         if (mappings.isEmpty()) {
+            log.error("No roles assigned for user: {} clientId: {}", user.getId(), client.getClientId());
             throw new IllegalStateException(
                     "User has no roles assigned for client: "
                             + client.getClientId()
@@ -83,6 +84,8 @@ public class TokenServiceImpl implements TokenService {
         RefreshToken savedRefreshToken =
                 refreshTokenRepository.save(refreshToken);
 
+        log.debug("Tokens issued — userId: {} clientId: {} sessionId: {}", user.getId(), client.getClientId(), sessionId);
+
         String accessToken =
                 jwtService.generateAccessToken(
                         user,
@@ -96,7 +99,7 @@ public class TokenServiceImpl implements TokenService {
                 refreshTokenValue,
                 jwtService.extractExpiration(accessToken),
                 savedRefreshToken.getExpiresAt(),
-                userMapper.toResponse(user)
+                UserMapper.toResponse(user)
         );
     }
 
@@ -104,21 +107,23 @@ public class TokenServiceImpl implements TokenService {
     public AuthResponse refresh(String refreshToken) {
         RefreshToken savedRefreshToken =
                 refreshTokenRepository.findByToken(refreshToken)
-                        .orElseThrow(() ->
-                                new UnauthorizedException(
-                                        ErrorCode.INVALID_REFRESH_TOKEN,
-                                        "Invalid refresh token"
-                                ));
+                        .orElseThrow(() -> {
+                            log.warn("Refresh failed — invalid refresh token");
+                            return new UnauthorizedException(
+                                    ErrorCode.INVALID_REFRESH_TOKEN,
+                                    "Invalid refresh token"
+                            );
+                        });
         if (savedRefreshToken.getRevoked()) {
+            log.warn("Refresh failed — token revoked for userId: {}", savedRefreshToken.getUser().getId());
             throw new UnauthorizedException(
                     ErrorCode.INVALID_REFRESH_TOKEN,
                     "Refresh token has been revoked"
             );
         }
         if (savedRefreshToken.getExpiresAt().isBefore(Instant.now())) {
-
+            log.warn("Refresh failed — token expired for userId: {}", savedRefreshToken.getUser().getId());
             savedRefreshToken.revoke();
-
             throw new UnauthorizedException(
                     ErrorCode.REFRESH_TOKEN_EXPIRED,
                     "Refresh token expired"
@@ -130,7 +135,7 @@ public class TokenServiceImpl implements TokenService {
 
         savedRefreshToken.revoke();
 
-
+        log.info("Token refreshed — userId: {} clientId: {}", user.getId(), client.getClientId());
         return issueTokens(user, client,savedRefreshToken.getSessionId());
     }
 
@@ -139,15 +144,19 @@ public class TokenServiceImpl implements TokenService {
 
         RefreshToken currentToken =
                 refreshTokenRepository.findByToken(refreshToken)
-                        .orElseThrow(() ->
-                                new UnauthorizedException(
-                                        ErrorCode.INVALID_REFRESH_TOKEN,
-                                        "Invalid refresh token"
-                                ));
+                        .orElseThrow(() -> {
+                            log.warn("Logout failed — invalid refresh token");
+                            return new UnauthorizedException(
+                                    ErrorCode.INVALID_REFRESH_TOKEN,
+                                    "Invalid refresh token"
+                            );
+                        });
 
         refreshTokenRepository
                 .findAllBySessionId(currentToken.getSessionId())
                 .forEach(RefreshToken::revoke);
+
+        log.info("User logged out — userId: {} sessionId: {}", currentToken.getUser().getId(), currentToken.getSessionId());
     }
 
     @Override
@@ -164,5 +173,6 @@ public class TokenServiceImpl implements TokenService {
                 });
 
         userRepository.incrementTokenVersion(userId);
+        log.info("All sessions revoked — userId: {}", userId);
     }
 }

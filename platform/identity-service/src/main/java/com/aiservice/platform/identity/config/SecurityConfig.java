@@ -68,8 +68,8 @@ public class SecurityConfig {
                                 "/auth/register",
                                 "/auth/login",
                                 "/auth/refresh",
-                                "/actuator/health",
-                                "/test/public"
+                                "/actuator/**",
+                                "/health"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

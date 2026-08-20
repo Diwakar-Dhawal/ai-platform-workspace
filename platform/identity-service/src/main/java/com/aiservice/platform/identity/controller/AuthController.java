@@ -8,10 +8,12 @@ import com.aiservice.platform.identity.dto.response.AuthResponse;
 import com.aiservice.platform.identity.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")

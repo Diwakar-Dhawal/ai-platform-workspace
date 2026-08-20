@@ -4,13 +4,10 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none  # Flyway owns schema management — do not use validate/create-drop
 
   flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: false
-    clean-disabled: true
+    enabled: false  # Auto-config removed in Boot 4.1 — using manual FlywayConfig
 
 application:
   version: 0.0.1
@@ -24,3 +21,7 @@ server:
   port: 8081
   servlet:
     context-path: /identity-service
+logging:
+  level:
+    org.flywaydb: DEBUG
+    org.springframework.boot.autoconfigure.flyway: DEBUG

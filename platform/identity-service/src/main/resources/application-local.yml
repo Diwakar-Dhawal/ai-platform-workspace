@@ -4,12 +4,21 @@ spring:
       on-profile: local
 
   datasource:
-    url: ${IDENTITY_DB_URL}
-    username: ${IDENTITY_DB_USERNAME}
-    password: ${IDENTITY_DB_PASSWORD}
+    url: ${IDENTITY_DB_URL:jdbc:postgresql://localhost:5432/identity}
+    username: ${IDENTITY_DB_USERNAME:postgres}
+    password: ${IDENTITY_DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     show-sql: true
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+server:
+  tomcat:
+    uri-encoding: UTF-8
 
 jwt:
-  secret: ${IDENTITY_JWT_SECRET}
+  secret: ${IDENTITY_JWT_SECRET:ThisIsAVeryLongDevelopmentSecretKey12345678901234567890}

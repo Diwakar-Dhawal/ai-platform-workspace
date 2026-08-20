@@ -68,6 +68,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(
+            BadRequestException ex) {
+
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                ex
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
 
@@ -78,7 +88,7 @@ public class GlobalExceptionHandler {
                                 "Internal Server Error",
                                 new ErrorResponse(
                                         ErrorCode.INTERNAL_SERVER_ERROR,
-                                        ex.getMessage()
+                                        "An unexpected error occurred. Please try again later."
                                 )
                         )
                 );
