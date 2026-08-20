@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.validation.FieldError;
 
+import org.springframework.security.access.AccessDeniedException;
+
 import java.util.List;
 
 @RestControllerAdvice
@@ -76,6 +78,21 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 ex
         );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(
+                        ApiResponse.failure(
+                                "Forbidden",
+                                new ErrorResponse(
+                                        ErrorCode.FORBIDDEN,
+                                        "You do not have permission to access this resource."
+                                )
+                        )
+                );
     }
 
     @ExceptionHandler(Exception.class)

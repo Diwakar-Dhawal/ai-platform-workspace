@@ -26,3 +26,18 @@ jwt:
   access-token-expiration: 900000
   refresh-token-expiration: 604800000
   issuer: identity-service
+
+# High limits so integration tests don't trip the in-memory rate limiter
+rate-limit:
+  login:
+    max-attempts: 10000
+    window-seconds: 1
+  register:
+    max-attempts: 10000
+    window-seconds: 1
+  refresh:
+    max-attempts: 10000
+    window-seconds: 1
+  forgot-password:
+    max-attempts: 10000
+    window-seconds: 1
