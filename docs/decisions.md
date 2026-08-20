@@ -301,16 +301,107 @@ Use separate profiles: `local`, `test`, `docker`, `prod`.
 
 ---
 
+## ADR-010: AccessDeniedException Handler Returns 403
+
+**Date:** 2026-08-20  
+**Status:** Accepted  
+**Decision Makers:** Diwak (via Codebuff)
+
+### Context
+When a user with insufficient roles (e.g., USER trying to access ADMIN endpoints) hits a `@PreAuthorize("hasRole('ADMIN')")` method, Spring Security throws `AccessDeniedException`. Without a handler in `GlobalExceptionHandler`, this fell through to the generic `Exception` handler, returning **500 Internal Server Error** instead of **403 Forbidden**.
+
+### Decision
+Add a dedicated `@ExceptionHandler(AccessDeniedException.class)` in `GlobalExceptionHandler` that returns HTTP 403 with a proper error response.
+
+### Rationale
+- **Correctness**: 403 accurately represents "authenticated but not authorized"
+- **Security**: Avoids leaking 500 errors for expected authorization failures
+- **Client experience**: Frontend can distinguish "not logged in" (401) from "not allowed" (403)
+
+### Trade-offs
+- ✅ Correct HTTP status codes
+- ✅ Consistent error response format
+- ❌ One more exception handler to maintain
+
+---
+
+## ADR-011: Forgot/Reset Password Prevents Email Enumeration
+
+**Date:** 2026-08-20  
+**Status:** Accepted  
+**Decision Makers:** Diwak (via Codebuff)
+
+### Context
+The forgot-password endpoint could leak whether an email is registered by returning different responses for valid vs. invalid emails.
+
+### Decision
+The `forgot-password` endpoint **always returns 200 OK** regardless of whether the email exists. The actual token generation and email sending only happens if the user exists, but the response is identical.
+
+### Rationale
+- **Security**: Prevents attackers from enumerating valid email addresses
+- **OWASP recommendation**: Standard practice for password reset flows
+- **User experience**: Consistent response regardless of input
+
+### Implementation
+```java
+public void forgotPassword(ForgotPasswordRequest request) {
+    // Only generates token if user exists
+    userRepository.findByEmail(request.email()).ifPresent(user -> {
+        // ... generate token, send email
+    });
+    // Always returns success — no exception thrown
+}
+```
+
+---
+
+## ADR-012: Swagger/OpenAPI with springdoc-openapi
+
+**Date:** 2026-08-20  
+**Status:** Accepted  
+**Decision Makers:** Diwak (via Codebuff)
+
+### Context
+API documentation was missing. Needed auto-generated docs for frontend integration and testing.
+
+### Decision
+Use `springdoc-openapi-starter-webmvc-ui` for Swagger UI and OpenAPI spec generation.
+
+### Configuration
+- Swagger UI: `/identity-service/swagger-ui.html`
+- OpenAPI spec: `/identity-service/v3/api-docs`
+- Annotations: `@Tag` on controllers, `@Operation` on endpoints
+
+### Rationale
+- **Auto-generated**: Docs stay in sync with code
+- **Interactive testing**: Swagger UI allows direct API calls
+- **Standard format**: OpenAPI 3.0 is widely supported
+- **Minimal config**: Works with sensible defaults
+
+### Known Issue
+SpringDoc's `io.swagger.v3.oas.annotations.responses.ApiResponse` name clashes with the project's `com.aiservice.platform.identity.dto.response.ApiResponse`. Resolved by not importing SpringDoc's `@ApiResponse` annotation.
+
+### Trade-offs
+- ✅ Developer experience
+- ✅ Auto-generated from code
+- ❌ Not required for functionality
+- ❌ Adds dependency (~3MB)
+
+---
+
 ## Summary of Key Decisions
 
-| Decision | Rationale | Trade-off |
-|----------|-----------|-----------|
-| Auth-only Identity | Clean boundaries | More services |
-| App-owned gateways | Independent deployment | Duplicate code |
-| No shared modules | Loose coupling | More API calls |
-| USER role on registration | Security | Manual admin |
-| Console email | No dependencies | No real emails |
-| In-memory rate limit | Simple | Single instance |
-| H2 for tests | Speed | Different behavior |
-| Manual Flyway | Works with Boot 4.1 | More code |
-| Profile separation | Isolation | More configs |
+| # | Decision | Rationale | Trade-off |
+|---|----------|-----------|-----------|
+| 001 | Auth-only Identity | Clean boundaries | More services |
+| 002 | App-owned gateways | Independent deployment | Duplicate code |
+| 003 | No shared modules | Loose coupling | More API calls |
+| 004 | USER role on registration | Security | Manual admin |
+| 005 | Console email | No dependencies | No real emails |
+| 006 | In-memory rate limit | Simple | Single instance |
+| 007 | H2 for tests | Speed | Different behavior |
+| 008 | Manual Flyway | Works with Boot 4.1 | More code |
+| 009 | Profile separation | Isolation | More configs |
+| 010 | AccessDeniedException → 403 | Correctness | Handler maintenance |
+| 011 | Forgot-password prevents enumeration | Security | Always 200 |
+| 012 | SpringDoc/OpenAPI | Developer experience | Extra dependency |

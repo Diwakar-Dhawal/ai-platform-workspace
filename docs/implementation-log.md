@@ -233,6 +233,86 @@ Need to document decisions, flows, and prioritization for future reference.
 
 ---
 
+## 2026-08-20: Session 8 — Git Recovery, Bug Fixes & Stash Recovery
+
+### Context
+IntelliJ pull caused a diverged branch (9 local vs 8 remote commits with different hashes). A git stash contained ~1684 lines of unrecovered work from earlier sessions (client/role APIs, rate limiting, verification tokens, email service, tests).
+
+### What Was Done
+
+#### Git Recovery
+| Issue | Resolution |
+|-------|------------|
+| Branch divergence | Analyzed both sides — local had newer fix commit, forced push |
+| Stashed work | Safely recovered stash after resolving overlapping untracked files |
+| Lost files from remote | Brought in TestController, RoleMapper, JwtProperties from remote |
+
+#### Bug Fixes
+| Issue | Fix | Impact |
+|-------|-----|--------|
+| Rate limiter flakiness across tests | Added high rate-limit thresholds to `application-test.yml` (10000 attempts) | Test reliability |
+| `AccessDeniedException` returns 500 | Added handler in `GlobalExceptionHandler` returning 403 | Security correctness |
+
+#### Test Impact
+- Tests went from 28 (many failing) → 51 passing
+- Root cause: `InMemoryRateLimitService` shared across test classes; first test exhausted limits
+
+### Files Changed
+- 33 files committed (from stash recovery + fixes)
+- 4 docs files committed
+
+---
+
+## 2026-08-20: Session 9 — Forgot/Reset Password, Email Verification Endpoints & Swagger
+
+### Context
+DTOs (`ForgotPasswordRequest`, `ResetPasswordRequest`, `VerifyEmailRequest`), entity (`VerificationToken`), repository, and migration existed but no endpoints wired them up. API documentation was also missing.
+
+### What Was Done
+
+#### Forgot/Reset Password Flow
+| Endpoint | Method | Auth Required | Description |
+|----------|--------|---------------|-------------|
+| `/auth/forgot-password` | POST | No | Generates reset token, sends email (console). Always returns 200 (prevents email enumeration). |
+| `/auth/reset-password` | POST | No | Validates token, updates password, revokes all sessions |
+| `/auth/verify-email` | POST | No | Validates token, marks `emailVerified = true` |
+
+#### Implementation Details
+- Forgot-password: deletes existing tokens, generates new 1-hour token, logs reset URL via `ConsoleEmailService`
+- Reset-password: validates token (not expired, not used), updates password hash, increments token version, revokes all refresh tokens
+- Verify-email: validates token (not expired, not used), marks email as verified
+- All three endpoints are public in `SecurityConfig.permitAll()`
+- New error codes: `TOKEN_INVALID_OR_EXPIRED`, `TOKEN_ALREADY_USED`
+
+#### Swagger / OpenAPI
+| Addition | Details |
+|----------|---------|
+| Dependency | `springdoc-openapi-starter-webmvc-ui:2.8.6` |
+| Config | `/identity-service/swagger-ui.html` |
+| Annotations | `@Tag` and `@Operation` on all controllers |
+| Fix | Resolved `ApiResponse` name clash with SpringDoc by dropping SpringDoc's `@ApiResponse` import |
+
+#### Files Modified
+| File | Changes |
+|------|---------|
+| `pom.xml` | Added springdoc-openapi dependency |
+| `AuthService.java` | Added `forgotPassword()`, `resetPassword()`, `verifyEmail()` |
+| `AuthServiceImpl.java` | Implemented all three methods (~150 lines) |
+| `AuthController.java` | Added 3 endpoints + OpenAPI annotations |
+| `ClientController.java` | Added OpenAPI annotations |
+| `RoleController.java` | Added OpenAPI annotations |
+| `ErrorCode.java` | Added `TOKEN_INVALID_OR_EXPIRED`, `TOKEN_ALREADY_USED` |
+| `SecurityConfig.java` | Added 3 public endpoints to `permitAll()` |
+| `application.yaml` | Added `springdoc` config + `application.base-url` |
+| `application-test.yml` | Added `application.base-url` |
+| `AuthIntegrationTest.java` | Added 14 new tests |
+
+### Test Coverage
+- 14 new tests covering: success flows, invalid tokens, expired tokens, already-used tokens, blank fields, email enumeration prevention
+- **Total: 65 tests passing**
+
+---
+
 ## Summary Statistics
 
 ### Code Changes (All Sessions)
@@ -240,32 +320,32 @@ Need to document decisions, flows, and prioritization for future reference.
 | Metric | Count |
 |--------|-------|
 | Files created | 35+ |
-| Files modified | 25+ |
+| Files modified | 30+ |
 | Files deleted | 5 |
-| Test cases | 51 |
-| Endpoints added | 15 |
-| Entity classes | 3 |
+| Test cases | 65 |
+| Endpoints added | 21 |
+| Entity classes | 6 |
 
 ### Test Coverage
 
 | Test Class | Tests | Status |
 |------------|-------|--------|
 | `IdentityServiceApplicationTests` | 1 | ✅ |
-| `AuthIntegrationTest` | 25 | ✅ |
+| `AuthIntegrationTest` | 39 | ✅ |
 | `ClientIntegrationTest` | 15 | ✅ |
 | `RoleIntegrationTest` | 10 | ✅ |
-| **Total** | **51** | **✅** |
+| **Total** | **65** | **✅** |
 
 ### Endpoints
 
 | Category | Endpoints | Auth Required |
 |----------|-----------|---------------|
-| Authentication | 5 | No (public) |
-| Token Management | 2 | Yes |
-| Client Management | 6 | ADMIN |
-| Role Management | 3 | ADMIN |
-| Health | 2 | No |
-| **Total** | **18** | — |
+| Authentication | 5 (register, login, refresh, logout, logout-all) | No (public) |
+| Password/Email | 3 (forgot-password, reset-password, verify-email) | No (public) |
+| Client Management | 6 (CRUD + lookup) | ADMIN |
+| Role Management | 3 (assign, remove, list) | ADMIN |
+| Health | 2 (health, actuator) | No |
+| **Total** | **19** | — |
 
 ### Entities
 
@@ -274,7 +354,7 @@ Need to document decisions, flows, and prioritization for future reference.
 | `User` | User accounts |
 | `Client` | Application clients |
 | `Role` | Authorization roles |
-| `UserClientRole` | User-role assignments |
+| `UserClientRole` | User-role assignments (client-scoped) |
 | `RefreshToken` | Session tokens |
 | `VerificationToken` | Email/password reset tokens |
 
@@ -290,6 +370,8 @@ Need to document decisions, flows, and prioritization for future reference.
 | `INVALID_CREDENTIALS` | 401 | Wrong email/password |
 | `ACCOUNT_INACTIVE` | 401 | Account disabled |
 | `TOKEN_INVALID` | 401 | Invalid/expired token |
+| `TOKEN_INVALID_OR_EXPIRED` | 400 | Verification/reset token invalid or expired |
+| `TOKEN_ALREADY_USED` | 400 | Token already consumed |
 | `FORBIDDEN` | 403 | Insufficient permissions |
 | `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
 
@@ -298,7 +380,7 @@ Need to document decisions, flows, and prioritization for future reference.
 ## Next Steps
 
 ### Immediate (Phase 1 Remaining)
-1. API Documentation (SpringDoc/OpenAPI)
+1. ~~API Documentation (SpringDoc/OpenAPI)~~ ✅ Done
 2. Dockerfile
 3. Refresh Token Hardening
 
@@ -321,3 +403,6 @@ Need to document decisions, flows, and prioritization for future reference.
 3. **Console-based email works** — Full flow testable without SMTP
 4. **Rate limiting is simple** — In-memory is sufficient for single instance
 5. **Documentation matters** — Decisions need to be recorded for future reference
+6. **Stashes are dangerous** — Always pop stashes promptly; they accumulate hidden work
+7. **Rate limiters break tests** — In-memory rate limiters shared across test classes cause flaky tests; use high limits in test profiles
+8. **AccessDeniedException needs a handler** — Spring Security throws it for `@PreAuthorize` failures; without a handler, it falls through to the generic 500 handler

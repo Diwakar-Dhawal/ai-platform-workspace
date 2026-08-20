@@ -46,7 +46,7 @@ Features were prioritized based on:
 
 ---
 
-### Phase 2: Identity Service Completion (This Session)
+### Phase 2: Identity Service Completion (Completed)
 
 | Feature | Priority | Rationale |
 |---------|----------|-----------|
@@ -282,7 +282,7 @@ Features were prioritized based on:
 
 ## Current Status
 
-### Completed in This Session
+### Completed (All Phases)
 
 | Feature | Status | Tests |
 |---------|--------|-------|
@@ -291,12 +291,12 @@ Features were prioritized based on:
 | Rate Limiting | ✅ Complete | Configurable |
 | Email Verification | ✅ Complete | Console mode |
 | Password Reset | ✅ Complete | Console mode |
+| API Documentation (Swagger) | ✅ Complete | Accessible at `/swagger-ui.html` |
 
 ### Remaining in Phase 1
 
 | Feature | Priority | Estimated Effort |
 |---------|----------|------------------|
-| API Documentation (SpringDoc) | P3 | Small |
 | Dockerfile | P3 | Small |
 | Refresh Token Hardening | P2 | Medium |
 | Session Management | P2 | Medium |
@@ -310,6 +310,7 @@ Features were prioritized based on:
 2. **Role Assignment second** — Complete authorization
 3. **Rate Limiting third** — Security basics
 4. **Email/Password Reset fourth** — User experience
-5. **Documentation/Dockerfile last** — Nice to have
+5. **Documentation fifth** — Developer experience
+6. **Dockerfile last** — Nice to have
 
 **Key insight:** Dependencies drive priority. Client Management was P1 because it unblocks Phase 2 (Gateway), which unblocks Phase 3 (Tube Service), which unblocks Phase 4 (Frontend).
