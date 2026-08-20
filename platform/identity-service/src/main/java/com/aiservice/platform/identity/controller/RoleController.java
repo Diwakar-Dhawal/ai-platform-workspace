@@ -5,6 +5,8 @@ import com.aiservice.platform.identity.dto.request.RemoveRolesRequest;
 import com.aiservice.platform.identity.dto.response.ApiResponse;
 import com.aiservice.platform.identity.dto.response.UserResponse;
 import com.aiservice.platform.identity.service.RoleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,11 +22,13 @@ import java.util.UUID;
 @AllArgsConstructor
 @RequestMapping("/admin/users")
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Role Management", description = "Admin APIs to assign, remove, and view user roles within a client")
 public class RoleController {
 
     private final RoleService roleService;
 
     @PostMapping("/{userId}/clients/{clientId}/roles")
+    @Operation(summary = "Assign roles to a user for a client")
     public ResponseEntity<ApiResponse<UserResponse>> assignRoles(
             @PathVariable UUID userId,
             @PathVariable String clientId,
@@ -36,6 +40,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{userId}/clients/{clientId}/roles")
+    @Operation(summary = "Remove roles from a user for a client")
     public ResponseEntity<ApiResponse<UserResponse>> removeRoles(
             @PathVariable UUID userId,
             @PathVariable String clientId,
@@ -47,6 +52,7 @@ public class RoleController {
     }
 
     @GetMapping("/{userId}/clients/{clientId}/roles")
+    @Operation(summary = "Get user roles for a client")
     public ResponseEntity<ApiResponse<List<String>>> getUserRoles(
             @PathVariable UUID userId,
             @PathVariable String clientId) {

@@ -21,6 +21,9 @@ spring:
     console:
       enabled: false
 
+application:
+  base-url: http://localhost
+
 jwt:
   secret: TestSecretKeyForUnitTestsOnly12345678901234567890
   access-token-expiration: 900000

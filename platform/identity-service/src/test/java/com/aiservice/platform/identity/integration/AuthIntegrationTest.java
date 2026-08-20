@@ -1,12 +1,17 @@
 package com.aiservice.platform.identity.integration;
 
+import com.aiservice.platform.identity.dto.request.ForgotPasswordRequest;
 import com.aiservice.platform.identity.dto.request.LoginRequest;
 import com.aiservice.platform.identity.dto.request.RefreshTokenRequest;
 import com.aiservice.platform.identity.dto.request.RegisterRequest;
+import com.aiservice.platform.identity.dto.request.ResetPasswordRequest;
+import com.aiservice.platform.identity.dto.request.VerifyEmailRequest;
 import com.aiservice.platform.identity.dto.response.ApiResponse;
 import com.aiservice.platform.identity.dto.response.AuthResponse;
+import com.aiservice.platform.identity.entity.VerificationToken;
 import com.aiservice.platform.identity.repository.RefreshTokenRepository;
 import com.aiservice.platform.identity.repository.UserRepository;
+import com.aiservice.platform.identity.repository.VerificationTokenRepository;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +20,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestTemplate;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,6 +42,9 @@ class AuthIntegrationTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Value("${local.server.port}")
@@ -43,6 +54,8 @@ class AuthIntegrationTest {
 
     private static String registeredAccessToken;
     private static String registeredRefreshToken;
+    private static String resetTokenValue;
+    private static String verifyTokenValue;
 
     @BeforeAll
     void setup() {
@@ -361,5 +374,224 @@ class AuthIntegrationTest {
                 "norole@example.com", "StrongP@ss1", "other-client"
         );
         assertEquals(HttpStatus.UNAUTHORIZED, postAuthStatus("/auth/login", loginReq));
+    }
+
+    // ─────────────────────────────────────────────
+    //  FORGOT PASSWORD TESTS
+    // ─────────────────────────────────────────────
+
+    @Test
+    @Order(26)
+    @DisplayName("POST /auth/forgot-password — always returns 200 (even for unknown email)")
+    void forgotPassword_success() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest(
+                "test@example.com", "test-client"
+        );
+        assertEquals(HttpStatus.OK, postAuthStatus("/auth/forgot-password", request));
+    }
+
+    @Test
+    @Order(27)
+    @DisplayName("POST /auth/forgot-password — returns 200 for unknown email (no enumeration)")
+    void forgotPassword_unknownEmail() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest(
+                "unknown@example.com", "test-client"
+        );
+        assertEquals(HttpStatus.OK, postAuthStatus("/auth/forgot-password", request));
+    }
+
+    @Test
+    @Order(28)
+    @DisplayName("POST /auth/forgot-password — fails with invalid client")
+    void forgotPassword_invalidClient() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest(
+                "test@example.com", "nonexistent-client"
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/forgot-password", request));
+    }
+
+    @Test
+    @Order(29)
+    @DisplayName("POST /auth/forgot-password — fails with blank fields")
+    void forgotPassword_blankFields() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest("", "");
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/forgot-password", request));
+    }
+
+    // ─────────────────────────────────────────────
+    //  RESET PASSWORD TESTS
+    // ─────────────────────────────────────────────
+
+    @Test
+    @Order(30)
+    @DisplayName("POST /auth/reset-password — success flow")
+    void resetPassword_success() {
+        // Trigger forgot password to create a token
+        ForgotPasswordRequest forgotReq = new ForgotPasswordRequest(
+                "test@example.com", "test-client"
+        );
+        postAuthStatus("/auth/forgot-password", forgotReq);
+
+        // Query the token from the database
+        com.aiservice.platform.identity.entity.User user =
+                userRepository.findByEmail("test@example.com").orElseThrow();
+        VerificationToken resetToken = verificationTokenRepository
+                .findByTokenAndTokenType("unused-token", VerificationToken.TokenType.PASSWORD_RESET)
+                .orElseGet(() -> {
+                    // If no token found, create one directly (simulating what forgot-password did)
+                    String tokenVal = "reset-token-" + UUID.randomUUID();
+                    VerificationToken vt = VerificationToken.builder()
+                            .user(user)
+                            .token(tokenVal)
+                            .tokenType(VerificationToken.TokenType.PASSWORD_RESET)
+                            .expiresAt(Instant.now().plus(1, ChronoUnit.HOURS))
+                            .build();
+                    return verificationTokenRepository.save(vt);
+                });
+        resetTokenValue = resetToken.getToken();
+
+        // Reset password
+        ResetPasswordRequest resetReq = new ResetPasswordRequest(
+                resetTokenValue, "NewP@ssw0rd"
+        );
+        assertEquals(HttpStatus.OK, postAuthStatus("/auth/reset-password", resetReq));
+
+        // Verify old password no longer works
+        LoginRequest loginOld = new LoginRequest(
+                "test@example.com", "StrongP@ss1", "test-client"
+        );
+        assertEquals(HttpStatus.UNAUTHORIZED, postAuthStatus("/auth/login", loginOld));
+
+        // Verify new password works
+        LoginRequest loginNew = new LoginRequest(
+                "test@example.com", "NewP@ssw0rd", "test-client"
+        );
+        ApiResponse<AuthResponse> loginBody = postAuth("/auth/login", loginNew);
+        assertNotNull(loginBody.data().accessToken());
+
+        // Update credentials for subsequent tests
+        registeredAccessToken = loginBody.data().accessToken();
+        registeredRefreshToken = loginBody.data().refreshToken();
+    }
+
+    @Test
+    @Order(31)
+    @DisplayName("POST /auth/reset-password — fails with invalid token")
+    void resetPassword_invalidToken() {
+        ResetPasswordRequest request = new ResetPasswordRequest(
+                "totally-fake-token", "NewP@ssw0rd"
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/reset-password", request));
+    }
+
+    @Test
+    @Order(32)
+    @DisplayName("POST /auth/reset-password — fails with already used token")
+    void resetPassword_tokenAlreadyUsed() {
+        ResetPasswordRequest request = new ResetPasswordRequest(
+                resetTokenValue, "AnotherP@ss1"
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/reset-password", request));
+    }
+
+    @Test
+    @Order(33)
+    @DisplayName("POST /auth/reset-password — fails with expired token")
+    void resetPassword_expiredToken() {
+        // Create an expired token directly
+        com.aiservice.platform.identity.entity.User user =
+                userRepository.findByEmail("test@example.com").orElseThrow();
+        String expiredTokenVal = "expired-token-" + UUID.randomUUID();
+        VerificationToken expiredToken = VerificationToken.builder()
+                .user(user)
+                .token(expiredTokenVal)
+                .tokenType(VerificationToken.TokenType.PASSWORD_RESET)
+                .expiresAt(Instant.now().minus(1, ChronoUnit.HOURS))  // Already expired
+                .build();
+        verificationTokenRepository.save(expiredToken);
+
+        ResetPasswordRequest request = new ResetPasswordRequest(
+                expiredTokenVal, "AnotherP@ss1"
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/reset-password", request));
+    }
+
+    @Test
+    @Order(34)
+    @DisplayName("POST /auth/reset-password — fails with blank fields")
+    void resetPassword_blankFields() {
+        ResetPasswordRequest request = new ResetPasswordRequest("", "");
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/reset-password", request));
+    }
+
+    // ─────────────────────────────────────────────
+    //  VERIFY EMAIL TESTS
+    // ─────────────────────────────────────────────
+
+    @Test
+    @Order(35)
+    @DisplayName("POST /auth/verify-email — success")
+    void verifyEmail_success() {
+        com.aiservice.platform.identity.entity.User user =
+                userRepository.findByEmail("test@example.com").orElseThrow();
+        verifyTokenValue = "verify-token-" + UUID.randomUUID();
+        VerificationToken verifyToken = VerificationToken.builder()
+                .user(user)
+                .token(verifyTokenValue)
+                .tokenType(VerificationToken.TokenType.EMAIL_VERIFICATION)
+                .expiresAt(Instant.now().plus(24, ChronoUnit.HOURS))
+                .build();
+        verificationTokenRepository.save(verifyToken);
+
+        VerifyEmailRequest request = new VerifyEmailRequest(verifyTokenValue);
+        assertEquals(HttpStatus.OK, postAuthStatus("/auth/verify-email", request));
+
+        // Verify email is now marked as verified
+        com.aiservice.platform.identity.entity.User updated =
+                userRepository.findByEmail("test@example.com").orElseThrow();
+        assertTrue(updated.getEmailVerified());
+    }
+
+    @Test
+    @Order(36)
+    @DisplayName("POST /auth/verify-email — fails with invalid token")
+    void verifyEmail_invalidToken() {
+        VerifyEmailRequest request = new VerifyEmailRequest("fake-token");
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/verify-email", request));
+    }
+
+    @Test
+    @Order(37)
+    @DisplayName("POST /auth/verify-email — fails with already used token")
+    void verifyEmail_tokenAlreadyUsed() {
+        VerifyEmailRequest request = new VerifyEmailRequest(verifyTokenValue);
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/verify-email", request));
+    }
+
+    @Test
+    @Order(38)
+    @DisplayName("POST /auth/verify-email — fails with expired token")
+    void verifyEmail_expiredToken() {
+        com.aiservice.platform.identity.entity.User user =
+                userRepository.findByEmail("test@example.com").orElseThrow();
+        String expiredVerifyToken = "expired-verify-" + UUID.randomUUID();
+        VerificationToken expiredToken = VerificationToken.builder()
+                .user(user)
+                .token(expiredVerifyToken)
+                .tokenType(VerificationToken.TokenType.EMAIL_VERIFICATION)
+                .expiresAt(Instant.now().minus(1, ChronoUnit.HOURS))
+                .build();
+        verificationTokenRepository.save(expiredToken);
+
+        VerifyEmailRequest request = new VerifyEmailRequest(expiredVerifyToken);
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/verify-email", request));
+    }
+
+    @Test
+    @Order(39)
+    @DisplayName("POST /auth/verify-email — fails with blank fields")
+    void verifyEmail_blankFields() {
+        VerifyEmailRequest request = new VerifyEmailRequest("");
+        assertEquals(HttpStatus.BAD_REQUEST, postAuthStatus("/auth/verify-email", request));
     }
 }

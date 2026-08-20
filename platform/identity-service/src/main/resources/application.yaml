@@ -11,6 +11,7 @@ spring:
 
 application:
   version: 0.0.1
+  base-url: http://localhost:8081
 
 jwt:
   access-token-expiration: 900000        # 15 min
@@ -35,6 +36,14 @@ rate-limit:
   forgot-password:
     max-attempts: 3
     window-seconds: 3600
+
+springdoc:
+  api-docs:
+    path: /identity-service/v3/api-docs
+  swagger-ui:
+    path: /identity-service/swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
 
 logging:
   level:

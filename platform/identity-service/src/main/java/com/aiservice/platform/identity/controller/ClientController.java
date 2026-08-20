@@ -5,6 +5,8 @@ import com.aiservice.platform.identity.dto.request.UpdateClientRequest;
 import com.aiservice.platform.identity.dto.response.ApiResponse;
 import com.aiservice.platform.identity.dto.response.ClientResponse;
 import com.aiservice.platform.identity.service.ClientService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,11 +23,13 @@ import java.util.UUID;
 @AllArgsConstructor
 @RequestMapping("/admin/clients")
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Client Management", description = "Admin APIs to create, read, update, and delete application clients")
 public class ClientController {
 
     private final ClientService clientService;
 
     @PostMapping
+    @Operation(summary = "Create a new client")
     public ResponseEntity<ApiResponse<ClientResponse>> createClient(
             @Valid @RequestBody CreateClientRequest request) {
 
@@ -36,6 +40,7 @@ public class ClientController {
     }
 
     @GetMapping
+    @Operation(summary = "Get all clients")
     public ResponseEntity<ApiResponse<List<ClientResponse>>> getAllClients() {
 
         List<ClientResponse> clients = clientService.getAllClients();
@@ -44,6 +49,7 @@ public class ClientController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get client by ID")
     public ResponseEntity<ApiResponse<ClientResponse>> getClientById(@PathVariable UUID id) {
 
         ClientResponse client = clientService.getClientById(id);
@@ -52,6 +58,7 @@ public class ClientController {
     }
 
     @GetMapping("/by-client-id/{clientId}")
+    @Operation(summary = "Get client by client ID string")
     public ResponseEntity<ApiResponse<ClientResponse>> getClientByClientId(@PathVariable String clientId) {
 
         ClientResponse client = clientService.getClientByClientId(clientId);
@@ -60,6 +67,7 @@ public class ClientController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update a client")
     public ResponseEntity<ApiResponse<ClientResponse>> updateClient(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateClientRequest request) {
@@ -70,6 +78,7 @@ public class ClientController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a client")
     public ResponseEntity<ApiResponse<Void>> deleteClient(@PathVariable UUID id) {
 
         clientService.deleteClient(id);
