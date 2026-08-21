@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  datasource:
+    url: ${TUBE_DB_URL}
+    username: ${TUBE_DB_USERNAME}
+    password: ${TUBE_DB_PASSWORD}

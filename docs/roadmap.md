@@ -107,4 +107,21 @@ This roadmap is dependency-first. It preserves the documented boundaries: Identi
 
 ## Current Recommended Focus
 
-**Phase 1, Milestone 1: Create Identity configuration and migration baseline (TD-001, TD-007).**
+**Phase 1, Milestone 4: Enforce scoped token validation and client-safe responses (TD-002, TD-013).**
+
+### What's Done (as of 2026-08-21)
+
+| Milestone | Status | Notes |
+|-----------|--------|-------|
+| Phase 1 M1: Config & Migrations (TD-001, TD-007) | **Done** ✅ | Flyway migrations, env-var profiles. Minor: docker-compose defaults. |
+| Phase 1 M2: Docs & Naming (TD-015, TD-025) | **Partial** | ADRs comprehensive; `api-contracts.md` empty, `project.txt` outdated. |
+| Phase 1 M3: Client Lifecycle (TD-006, TD-010) | **Partial** | TD-006 done (full CRUD). TD-010 pending (API contracts). |
+| Phase 1 M4: Token Validation (TD-002, TD-013, TD-018) | **Partial** | TD-018 done. TD-002 partial (gateway validates issuer; Identity filter missing iss/aud). TD-013 pending (UserMapper leaks all roles). |
+| Phase 1 M5: Account & Session Hardening (TD-003, TD-004, TD-005) | **Partial** | Rotation + revocation working. Remaining: isEnabled() hardcoded, no token hashing, access token valid after logout. |
+| Phase 1 M6: Tests & Contracts (TD-008, TD-010) | **Partial** | Auth/client/role integration tests exist. Security, concurrency, gateway tests missing. |
+| Phase 1 M7: Deployment Config (TD-011) | **Partial** | DB provisioned. No service containers. |
+| Phase 2 M1: Gateway Routes & Policy (TD-009, TD-010, TD-017) | **Done** ✅ | JWT validation, CORS, routes, exception handler. |
+| Phase 2 M2: Gateway JWT Enforcement (TD-002, TD-009) | **Partial** | Gateway validates issuer + token type. TD-002 partial (audience validation pending). |
+| Phase 2 M3: Gateway Resilience (TD-008, TD-017) | **Partial** | Identity routing done. Timeout config, rate limiting, gateway tests pending. |
+| Phase 2 M4: Gateway Deployment (TD-011, TD-021) | **Not started** | |
+

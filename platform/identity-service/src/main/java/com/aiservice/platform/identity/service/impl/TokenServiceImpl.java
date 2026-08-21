@@ -99,7 +99,7 @@ public class TokenServiceImpl implements TokenService {
                 refreshTokenValue,
                 jwtService.extractExpiration(accessToken),
                 savedRefreshToken.getExpiresAt(),
-                UserMapper.toResponse(user)
+                UserMapper.toResponse(user, client)
         );
     }
 

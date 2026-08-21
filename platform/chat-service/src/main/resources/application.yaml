@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: chat-service
+
+  jpa:
+    hibernate:
+      ddl-auto: none  # Flyway owns schema management
+
+  flyway:
+    enabled: false  # Auto-config removed in Boot 4.1 — using manual FlywayConfig
+
+server:
+  port: 8083
+  servlet:
+    context-path: /chat-service
+
+# JWT validation (tokens issued by Identity Service)
+jwt:
+  secret: ${IDENTITY_JWT_SECRET:ThisIsAVeryLongDevelopmentSecretKey12345678901234567890}
+  issuer: identity-service
+
+springdoc:
+  api-docs:
+    path: /chat-service/v3/api-docs
+  swagger-ui:
+    path: /chat-service/swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+
+logging:
+  level:
+    org.flywaydb: DEBUG
+    com.aiservice.platform.chatservice: DEBUG

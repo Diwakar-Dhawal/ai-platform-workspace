@@ -1,4 +1,4 @@
-package com.aiservice.platform.identity.config;
+package com.aiservice.applications.insighttube.tubeservice.config;
 
 import javax.sql.DataSource;
 
@@ -10,6 +10,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 /**
  * Manual Flyway configuration for Spring Boot 4.1+.
@@ -24,8 +25,6 @@ public class FlywayConfig implements BeanDefinitionRegistryPostProcessor {
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        // Add depends-on="flywayInitializer" to the EntityManagerFactory bean
-        // This ensures Flyway runs BEFORE Hibernate tries to use the database
         String[] emfNames = {"entityManagerFactory", "jpaSharedEM_entityManagerFactory"};
         for (String name : emfNames) {
             if (registry.containsBeanDefinition(name)) {
@@ -38,12 +37,11 @@ public class FlywayConfig implements BeanDefinitionRegistryPostProcessor {
 
     @Override
     public void postProcessBeanFactory(org.springframework.beans.factory.config.ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        // No-op — all work done in postProcessBeanDefinitionRegistry
+        // No-op
     }
 
     @Bean
-    public FlywayInitializer flywayInitializer(DataSource dataSource,
-            org.springframework.core.env.Environment environment) {
+    public FlywayInitializer flywayInitializer(DataSource dataSource, Environment environment) {
         boolean flywayEnabled = environment.getProperty("spring.flyway.enabled", Boolean.class, true);
         if (!flywayEnabled) {
             log.info("Flyway disabled via spring.flyway.enabled=false — skipping migrations");
@@ -52,10 +50,6 @@ public class FlywayConfig implements BeanDefinitionRegistryPostProcessor {
         return new FlywayInitializer(dataSource);
     }
 
-    /**
-     * Separate bean that runs Flyway migrations during construction.
-     * Because entityManagerFactory depends on this bean, it will be created first.
-     */
     static class FlywayInitializer {
 
         FlywayInitializer() {

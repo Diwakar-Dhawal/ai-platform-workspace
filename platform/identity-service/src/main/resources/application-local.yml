@@ -4,7 +4,7 @@ spring:
       on-profile: local
 
   datasource:
-    url: ${IDENTITY_DB_URL:jdbc:postgresql://localhost:5432/identity}
+    url: ${IDENTITY_DB_URL:jdbc:postgresql://localhost:5432/identity?currentSchema=public&sessionVariables=timezone%3DUTC}
     username: ${IDENTITY_DB_USERNAME:postgres}
     password: ${IDENTITY_DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver

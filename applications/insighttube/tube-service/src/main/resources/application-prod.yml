@@ -1,0 +1,12 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: ${TUBE_DB_URL}
+    username: ${TUBE_DB_USERNAME}
+    password: ${TUBE_DB_PASSWORD}
+
+  jpa:
+    show-sql: false
