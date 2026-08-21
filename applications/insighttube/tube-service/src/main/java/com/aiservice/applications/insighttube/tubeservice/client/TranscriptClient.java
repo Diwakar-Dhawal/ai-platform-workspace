@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,7 +29,8 @@ public class TranscriptClient {
 
     public TranscriptResponse extractTranscript(String url, java.util.List<String> languages) {
         try {
-            Map<String, Object> body = Map.of("url", url, "languages", languages);
+            List<String> langs = (languages == null || languages.isEmpty()) ? List.of("en") : languages;
+            Map<String, Object> body = Map.of("url", url, "languages", langs);
 
             HttpEntity<String> request = new HttpEntity<>(
                     objectMapper.writeValueAsString(body),

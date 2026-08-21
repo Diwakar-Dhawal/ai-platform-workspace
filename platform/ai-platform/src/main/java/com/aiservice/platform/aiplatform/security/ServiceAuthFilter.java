@@ -42,6 +42,14 @@ public class ServiceAuthFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        String uri = request.getRequestURI();
+
+        // Skip health/actuator endpoints — no auth required
+        if (uri.endsWith("/health") || uri.contains("/actuator")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // If no secret is configured, skip validation (dev mode)
         if (expectedSecret == null || expectedSecret.isBlank()) {
             filterChain.doFilter(request, response);

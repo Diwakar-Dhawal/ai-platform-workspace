@@ -36,6 +36,20 @@ async function apiFetch<T>(
   if (!response.ok) {
     const error = await response.text();
     console.error(`[API] Error ${response.status}: ${error}`);
+
+    // On 403/401, the JWT token is expired or invalid — clear and reload
+    if (response.status === 403 || response.status === 401) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("insighttube_messages");
+      localStorage.removeItem("insighttube_active_session");
+      // Reload to show login page
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    }
+
     throw new Error(`API error ${response.status}: ${error}`);
   }
 

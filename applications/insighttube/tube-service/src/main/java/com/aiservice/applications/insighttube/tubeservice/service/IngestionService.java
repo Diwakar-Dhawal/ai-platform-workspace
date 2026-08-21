@@ -6,8 +6,9 @@ import com.aiservice.applications.insighttube.tubeservice.dto.IngestProgress;
 import com.aiservice.applications.insighttube.tubeservice.dto.IngestRequest;
 import com.aiservice.applications.insighttube.tubeservice.dto.IngestResponse;
 import com.aiservice.applications.insighttube.tubeservice.dto.TranscriptResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -25,12 +26,20 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class IngestionService {
 
     private final TranscriptClient transcriptClient;
     private final AiPlatformClient aiPlatformClient;
     private final TranscriptChunker chunker;
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    public IngestionService(TranscriptClient transcriptClient, AiPlatformClient aiPlatformClient, TranscriptChunker chunker) {
+        this.transcriptClient = transcriptClient;
+        this.aiPlatformClient = aiPlatformClient;
+        this.chunker = chunker;
+    }
 
     /** In-memory session and progress stores (replace with DB in production) */
     private final Map<UUID, ContentSession> sessions = new ConcurrentHashMap<>();
@@ -66,8 +75,8 @@ public class IngestionService {
         );
         sessions.put(sessionId, placeholder);
 
-        // Run pipeline asynchronously
-        runPipeline(sessionId, request, userId);
+        // Run pipeline asynchronously — must call through proxy to activate @Async
+        applicationContext.getBean(IngestionService.class).runPipeline(sessionId, request, userId);
 
         // Return immediately — frontend polls for progress
         return IngestResponse.builder()

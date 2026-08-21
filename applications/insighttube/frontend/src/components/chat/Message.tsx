@@ -3,6 +3,7 @@
 import { User, Bot } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { MarkdownContent } from "./MarkdownContent";
 import type { ChatMessage, TimestampSource } from "@/lib/types";
 
 interface MessageProps {
@@ -30,10 +31,14 @@ export function Message({ message }: MessageProps) {
             : "bg-[#1e1e1e] text-white/90 border border-white/5"
         }`}
       >
-        {/* Message content */}
-        <div className="text-sm leading-relaxed whitespace-pre-wrap">
-          {message.content}
-        </div>
+        {/* Message content — render markdown for AI, plain for user */}
+        {isUser ? (
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            {message.content}
+          </div>
+        ) : (
+          <MarkdownContent content={message.content} />
+        )}
 
         {/* Timestamp sources */}
         {message.sources && message.sources.length > 0 && (
@@ -70,17 +75,13 @@ export function Message({ message }: MessageProps) {
 }
 
 function TimestampChip({ source }: { source: TimestampSource }) {
-  const handleClick = () => {
-    // Open YouTube at specific timestamp
-    const videoUrl = `https://www.youtube.com/watch?v=${source.timestamp}`;
-    window.open(videoUrl, "_blank");
-  };
-
+  // Display-only badge — video ID is not available in the source object,
+  // so we can't construct a clickable YouTube link. Citations in the
+  // text itself (e.g. [Video at 5:30]) serve as references.
   return (
     <Badge
       variant="outline"
-      className="cursor-pointer bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors text-xs gap-1"
-      onClick={handleClick}
+      className="bg-blue-500/10 border-blue-500/30 text-blue-400 text-xs gap-1"
     >
       ▶ {source.timestamp}
     </Badge>
