@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -61,5 +62,31 @@ public class ContentController {
             throw new jakarta.persistence.EntityNotFoundException("Session not found: " + sessionId);
         }
         return session;
+    }
+
+    @GetMapping("/sessions/{sessionId}/status")
+    @Operation(
+            summary = "Get ingest progress",
+            description = "Poll this endpoint every 2 seconds during ingestion to track real-time progress. " +
+                    "Returns status, percent complete, chunks embedded/stored, and estimated time remaining."
+    )
+    public IngestProgress getIngestProgress(@PathVariable UUID sessionId) {
+        IngestProgress progress = ingestionService.getProgress(sessionId);
+        if (progress == null) {
+            throw new jakarta.persistence.EntityNotFoundException("Session not found: " + sessionId);
+        }
+        log.debug("Progress for session {}: {} ({}%)", sessionId, progress.getStatus(), progress.getPercentComplete());
+        return progress;
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    @Operation(summary = "Delete content session", description = "Remove ingested content and its vectors")
+    public Map<String, String> deleteSession(@PathVariable UUID sessionId) {
+        IngestionService.ContentSession session = ingestionService.getSession(sessionId);
+        if (session == null) {
+            throw new jakarta.persistence.EntityNotFoundException("Session not found: " + sessionId);
+        }
+        ingestionService.deleteSession(sessionId);
+        return Map.of("status", "deleted", "sessionId", sessionId.toString());
     }
 }

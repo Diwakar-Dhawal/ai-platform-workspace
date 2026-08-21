@@ -2,11 +2,13 @@ package com.aiservice.applications.insighttube.tubeservice.service;
 
 import com.aiservice.applications.insighttube.tubeservice.client.AiPlatformClient;
 import com.aiservice.applications.insighttube.tubeservice.client.TranscriptClient;
+import com.aiservice.applications.insighttube.tubeservice.dto.IngestProgress;
 import com.aiservice.applications.insighttube.tubeservice.dto.IngestRequest;
 import com.aiservice.applications.insighttube.tubeservice.dto.IngestResponse;
 import com.aiservice.applications.insighttube.tubeservice.dto.TranscriptResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,8 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Orchestrates the full content ingestion pipeline:
  *   YouTube URL → Transcript → Chunk → Embed → Store in Pinecone
  *
- * Content sessions are stored in-memory for MVP.
- * Replace with database in production.
+ * Ingestion runs asynchronously. Frontend polls GET /sessions/{id}/status
+ * for real-time progress updates.
  */
 @Slf4j
 @Service
@@ -30,8 +32,9 @@ public class IngestionService {
     private final AiPlatformClient aiPlatformClient;
     private final TranscriptChunker chunker;
 
-    /** In-memory session store (replace with DB in production) */
+    /** In-memory session and progress stores (replace with DB in production) */
     private final Map<UUID, ContentSession> sessions = new ConcurrentHashMap<>();
+    private final Map<UUID, IngestProgress> progressMap = new ConcurrentHashMap<>();
 
     public record ContentSession(
             UUID id,
@@ -45,15 +48,50 @@ public class IngestionService {
     ) {}
 
     /**
-     * Full ingestion pipeline: extract → chunk → embed → store.
+     * Start ingestion asynchronously. Returns immediately with sessionId.
+     * Frontend polls GET /sessions/{id}/status for progress.
      */
     public IngestResponse ingest(IngestRequest request, UUID userId) {
         UUID sessionId = UUID.randomUUID();
         log.info("Starting ingestion for URL: {} (session: {})", request.getUrl(), sessionId);
 
+        // Initialize progress
+        IngestProgress progress = IngestProgress.started(sessionId);
+        progressMap.put(sessionId, progress);
+
+        // Save placeholder session immediately
+        ContentSession placeholder = new ContentSession(
+                sessionId, "Processing...", request.getUrl(), "unknown",
+                0, 0, "processing", userId
+        );
+        sessions.put(sessionId, placeholder);
+
+        // Run pipeline asynchronously
+        runPipeline(sessionId, request, userId);
+
+        // Return immediately — frontend polls for progress
+        return IngestResponse.builder()
+                .status("processing")
+                .contentSessionId(sessionId)
+                .title("Processing...")
+                .sourceUrl(request.getUrl())
+                .chunkCount(0)
+                .message("Ingestion started. Poll GET /api/v1/content/sessions/" + sessionId + "/status for progress.")
+                .build();
+    }
+
+    /**
+     * The actual pipeline, runs in a separate thread.
+     */
+    @Async
+    public void runPipeline(UUID sessionId, IngestRequest request, UUID userId) {
+        IngestProgress progress = progressMap.get(sessionId);
+
         try {
-            // 1. Extract transcript from Python service
-            log.info("Step 1: Extracting transcript...");
+            // ── Step 1: Extract transcript ──
+            log.info("Step 1: Extracting transcript for session {}", sessionId);
+            progress.withExtractingTranscript();
+
             TranscriptResponse transcript = transcriptClient.extractTranscript(
                     request.getUrl(),
                     request.getLanguages()
@@ -67,16 +105,20 @@ public class IngestionService {
             log.info("Extracted {} videos, {} segments (title: {})",
                     transcript.getTotalVideos(), transcript.getTotalSegments(), title);
 
-            // 2. Chunk the transcripts
-            log.info("Step 2: Chunking transcripts...");
+            // ── Step 2: Chunk transcripts ──
+            log.info("Step 2: Chunking transcripts for session {}", sessionId);
+            progress.withChunking(transcript.getTotalSegments(), transcript.getTotalVideos());
+
             List<TranscriptChunker.ChunkData> chunks = chunker.chunk(
                     transcript.getVideos(),
                     sessionId
             );
             log.info("Created {} chunks", chunks.size());
 
-            // 3. Embed and store each chunk via AI Platform
-            log.info("Step 3: Embedding and storing chunks...");
+            // ── Step 3: Embed and store chunks ──
+            log.info("Step 3: Embedding and storing {} chunks for session {}", chunks.size(), sessionId);
+            progress.withEmbedding(chunks.size(), title);
+
             String appId = "insighttube";
             int storedCount = 0;
 
@@ -84,6 +126,7 @@ public class IngestionService {
                 try {
                     // Embed via AI Platform
                     List<Float> embedding = aiPlatformClient.embed(chunk.content());
+                    progress.withChunkEmbedded();
 
                     // Store via AI Platform
                     aiPlatformClient.storeChunk(
@@ -96,18 +139,22 @@ public class IngestionService {
                             embedding,
                             chunk.metadata()
                     );
+                    progress.withChunkStored();
 
                     storedCount++;
                 } catch (Exception e) {
                     log.warn("Failed to store chunk {}: {}", chunk.chunkId(), e.getMessage());
-                    // Continue with other chunks
+                    // Still count as embedded, just failed to store
+                    progress.withChunkStored();
                 }
             }
 
-            log.info("Stored {}/{} chunks", storedCount, chunks.size());
+            log.info("Stored {}/{} chunks for session {}", storedCount, chunks.size(), sessionId);
 
-            // 4. Save content session
-            ContentSession session = new ContentSession(
+            // ── Step 4: Mark completed ──
+            progress.withCompleted();
+
+            ContentSession completedSession = new ContentSession(
                     sessionId,
                     title,
                     request.getUrl(),
@@ -117,22 +164,15 @@ public class IngestionService {
                     "completed",
                     userId
             );
-            sessions.put(sessionId, session);
+            sessions.put(sessionId, completedSession);
 
-            // 5. Return response
-            return IngestResponse.builder()
-                    .status("success")
-                    .contentSessionId(sessionId)
-                    .title(title)
-                    .sourceUrl(request.getUrl())
-                    .chunkCount(storedCount)
-                    .message(String.format("Ingested %d videos into %d chunks", transcript.getTotalVideos(), storedCount))
-                    .build();
+            log.info("Ingestion completed for session {} ({} chunks, {} videos)",
+                    sessionId, storedCount, transcript.getTotalVideos());
 
         } catch (Exception e) {
-            log.error("Ingestion failed for URL: {}", request.getUrl(), e);
+            log.error("Ingestion failed for session {} (URL: {})", sessionId, request.getUrl(), e);
+            progress.withFailed(e.getMessage());
 
-            // Save failed session
             ContentSession failedSession = new ContentSession(
                     sessionId,
                     "Failed",
@@ -144,9 +184,31 @@ public class IngestionService {
                     userId
             );
             sessions.put(sessionId, failedSession);
-
-            throw new RuntimeException("Ingestion failed: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Get real-time progress for an ingestion session.
+     * This is what the frontend polls every 2 seconds.
+     */
+    public IngestProgress getProgress(UUID sessionId) {
+        IngestProgress progress = progressMap.get(sessionId);
+        if (progress == null) {
+            // Check if session exists but progress expired
+            ContentSession session = sessions.get(sessionId);
+            if (session == null) {
+                return null;
+            }
+            // Return a basic progress from session status
+            return IngestProgress.builder()
+                    .contentSessionId(sessionId)
+                    .status(session.status().toUpperCase())
+                    .currentStep(session.status())
+                    .percentComplete("completed".equals(session.status()) ? 100 : 0)
+                    .title(session.title())
+                    .build();
+        }
+        return progress;
     }
 
     /**
@@ -163,5 +225,14 @@ public class IngestionService {
         return sessions.values().stream()
                 .filter(s -> s.userId().equals(userId))
                 .toList();
+    }
+
+    /**
+     * Delete a content session and its progress.
+     */
+    public void deleteSession(UUID sessionId) {
+        sessions.remove(sessionId);
+        progressMap.remove(sessionId);
+        log.info("Deleted session {} and its progress", sessionId);
     }
 }
