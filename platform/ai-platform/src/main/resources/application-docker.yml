@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  datasource:
+    url: ${AI_DB_URL}
+    username: ${AI_DB_USERNAME}
+    password: ${AI_DB_PASSWORD}

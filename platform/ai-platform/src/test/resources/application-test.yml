@@ -1,0 +1,40 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  flyway:
+    enabled: false
+
+  h2:
+    console:
+      enabled: false
+
+  # Disable Redis in tests
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+jwt:
+  secret: TestSecretKeyForUnitTestsOnly12345678901234567890
+  issuer: identity-service
+
+ai-platform:
+  gemini:
+    api-key: test-key
+  pinecone:
+    api-key: test-key
+    index-host: test-host
+    index-name: test-index

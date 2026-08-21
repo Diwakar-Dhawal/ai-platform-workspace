@@ -1,0 +1,96 @@
+spring:
+  application:
+    name: ai-platform
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: false
+
+  # Redis configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+server:
+  port: 8084
+  servlet:
+    context-path: /ai-platform
+
+# JWT validation (tokens issued by Identity Service)
+jwt:
+  secret: ${IDENTITY_JWT_SECRET:ThisIsAVeryLongDevelopmentSecretKey12345678901234567890}
+  issuer: identity-service
+
+# ===================================================================
+# AI Platform Configuration
+# ===================================================================
+ai-platform:
+  # Google Gemini (free tier: 15 RPM, 1M tokens/day)
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+
+  # Pinecone (free tier: 100K vectors, 1GB)
+  pinecone:
+    api-key: ${PINECONE_API_KEY:}
+    index-host: ${PINECONE_INDEX_HOST:}
+    index-name: ${PINECONE_INDEX_NAME:ai-platform}
+
+  # Per-Application Prompt Configuration
+  prompts:
+    insighttube:
+      chunk-strategy: transcript-by-timestamp
+      metadata-fields:
+        - video_id
+        - video_title
+        - channel_name
+        - timestamp
+        - duration
+        - publish_date
+      chunk-size: 512
+      chunk-overlap: 100
+      top-k: 10
+      similarity-threshold: 0.7
+      model: gemini-3-flash-preview
+      max-completion-tokens: 2048
+      temperature: 0.3
+      include-sources: true
+      citation-format: timestamp
+
+    pdfmind:
+      chunk-strategy: semantic-with-page-boundary
+      metadata-fields:
+        - page_number
+        - chapter
+        - section_title
+        - document_title
+        - document_author
+        - total_pages
+      chunk-size: 768
+      chunk-overlap: 150
+      top-k: 15
+      similarity-threshold: 0.75
+      model: gemini-3-flash-preview
+      max-completion-tokens: 4096
+      temperature: 0.2
+      include-sources: true
+      citation-format: page-number
+
+springdoc:
+  api-docs:
+    path: /ai-platform/v3/api-docs
+  swagger-ui:
+    path: /ai-platform/swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+
+logging:
+  level:
+    org.flywaydb: DEBUG
+    com.aiservice.platform.aiplatform: DEBUG
+    org.springframework.data.redis: DEBUG

@@ -4,17 +4,24 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none  # Flyway owns schema management
+      ddl-auto: none
 
   flyway:
-    enabled: false  # Auto-config removed in Boot 4.1 — using manual FlywayConfig
+    enabled: false
 
 server:
   port: 8082
   servlet:
     context-path: /tube-service
 
-# JWT validation (tokens issued by Identity Service)
+# External service URLs
+services:
+  transcript-service:
+    url: ${TRANSCRIPT_SERVICE_URL:http://localhost:8085}
+  ai-platform:
+    url: ${AI_PLATFORM_URL:http://localhost:8084/ai-platform}
+
+# JWT validation
 jwt:
   secret: ${IDENTITY_JWT_SECRET:ThisIsAVeryLongDevelopmentSecretKey12345678901234567890}
   issuer: identity-service
@@ -24,10 +31,7 @@ springdoc:
     path: /tube-service/v3/api-docs
   swagger-ui:
     path: /tube-service/swagger-ui.html
-    tags-sorter: alpha
-    operations-sorter: method
 
 logging:
   level:
-    org.flywaydb: DEBUG
     com.aiservice.applications.insighttube.tubeservice: DEBUG

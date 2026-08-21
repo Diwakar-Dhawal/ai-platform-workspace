@@ -1,0 +1,12 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: ${AI_DB_URL}
+    username: ${AI_DB_USERNAME}
+    password: ${AI_DB_PASSWORD}
+
+  jpa:
+    show-sql: false

@@ -1,6 +1,6 @@
-package com.aiservice.applications.insighttube.tubeservice.config;
+package com.aiservice.platform.aiplatform.config;
 
-import com.aiservice.applications.insighttube.tubeservice.security.JwtAuthenticationFilter;
+import com.aiservice.platform.aiplatform.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
