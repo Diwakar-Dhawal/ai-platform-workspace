@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,9 @@ public class AiPlatformClient {
 
     @Value("${services.ai-platform.url}")
     private String aiPlatformUrl;
+
+    @Value("${services.ai-platform-secret:}")
+    private String serviceSecret;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -131,6 +135,9 @@ public class AiPlatformClient {
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        if (serviceSecret != null && !serviceSecret.isBlank()) {
+            headers.set("X-Service-Secret", serviceSecret);
+        }
         return headers;
     }
 }

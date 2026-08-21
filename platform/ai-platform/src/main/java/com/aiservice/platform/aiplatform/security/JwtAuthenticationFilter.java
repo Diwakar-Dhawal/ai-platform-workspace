@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +37,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Value("${jwt.issuer}")
     private String issuer;
+
+    @PostConstruct
+    public void validateConfig() {
+        if (secret == null || secret.isBlank()) {
+            log.warn("jwt.secret is not configured — JWT validation disabled. Set IDENTITY_JWT_SECRET for production.");
+        }
+        log.info("JWT filter initialized (issuer={})", issuer);
+    }
 
     @Override
     protected void doFilterInternal(

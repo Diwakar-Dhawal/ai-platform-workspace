@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tube_service?options=-c%20TimeZone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -26,10 +26,11 @@ services:
     url: ${TRANSCRIPT_SERVICE_URL:http://localhost:8085}
   ai-platform:
     url: ${AI_PLATFORM_URL:http://localhost:8084/ai-platform}
+  ai-platform-secret: ${AI_PLATFORM_SECRET:}
 
-# JWT validation
+# JWT validation — secret MUST be set via IDENTITY_JWT_SECRET env var
 jwt:
-  secret: ${IDENTITY_JWT_SECRET:ThisIsAVeryLongDevelopmentSecretKey12345678901234567890}
+  secret: ${IDENTITY_JWT_SECRET}
   issuer: identity-service
 
 springdoc:
@@ -37,7 +38,17 @@ springdoc:
     path: /tube-service/v3/api-docs
   swagger-ui:
     path: /tube-service/swagger-ui.html
+  packages-to-scan: com.aiservice.applications.insighttube.tubeservice.controller
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
 
 logging:
   level:
-    com.aiservice.applications.insighttube.tubeservice: DEBUG
+    com.aiservice.applications.insighttube.tubeservice: INFO

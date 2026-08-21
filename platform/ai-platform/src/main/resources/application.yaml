@@ -5,12 +5,12 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ai_platform?options=-c TimeZone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
       properties:
         hibernate.jdbc.time_zone: UTC
 
@@ -30,10 +30,14 @@ server:
   servlet:
     context-path: /ai-platform
 
-# JWT validation (tokens issued by Identity Service)
+# JWT validation — secret MUST be set via IDENTITY_JWT_SECRET env var
 jwt:
-  secret: ${IDENTITY_JWT_SECRET:ThisIsAVeryLongDevelopmentSecretKey12345678901234567890}
+  secret: ${IDENTITY_JWT_SECRET}
   issuer: identity-service
+
+# Service-to-service secret — Tube Service must send this header
+service:
+  secret: ${AI_PLATFORM_SECRET:}
 
 # ===================================================================
 # AI Platform Configuration
@@ -92,6 +96,15 @@ ai-platform:
       include-sources: true
       citation-format: page-number
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
 springdoc:
   api-docs:
     path: /ai-platform/v3/api-docs
@@ -99,9 +112,9 @@ springdoc:
     path: /ai-platform/swagger-ui.html
     tags-sorter: alpha
     operations-sorter: method
+  packages-to-scan: com.aiservice.platform.aiplatform.controller
 
 logging:
   level:
-    org.flywaydb: DEBUG
-    com.aiservice.platform.aiplatform: DEBUG
-    org.springframework.data.redis: DEBUG
+    com.aiservice.platform.aiplatform: INFO
+    org.springframework.security: WARN

@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Value("${jwt.issuer}")
     private String issuer;
+
+    @PostConstruct
+    public void validateConfig() {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("FATAL: jwt.secret is not configured. Set IDENTITY_JWT_SECRET environment variable.");
+        }
+        if (secret.length() < 32) {
+            throw new IllegalStateException("FATAL: jwt.secret must be at least 32 characters.");
+        }
+        log.info("JWT filter initialized (issuer={})", issuer);
+    }
 
     @Override
     protected void doFilterInternal(
