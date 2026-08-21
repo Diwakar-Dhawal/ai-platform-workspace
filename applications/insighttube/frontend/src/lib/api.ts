@@ -7,15 +7,15 @@ import type {
   ChatSession,
 } from "./types";
 
-const API_BASE = "";  // Use Next.js proxy (rewrites in next.config.ts)
+// All paths use /tube-service prefix which maps to context-path on Tube Service
+const TUBE_BASE = "/tube-service";
 
 async function apiFetch<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_BASE}${path}`;
+  const url = `${TUBE_BASE}${path}`;
 
-  // Get token from localStorage (or wherever auth stores it)
   const token =
     typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
 
@@ -25,6 +25,8 @@ async function apiFetch<T>(
     ...(options?.headers as Record<string, string> || {}),
   };
 
+  console.log(`[API] ${options?.method || "GET"} ${url}`);
+
   const response = await fetch(url, {
     ...options,
     headers,
@@ -32,6 +34,7 @@ async function apiFetch<T>(
 
   if (!response.ok) {
     const error = await response.text();
+    console.error(`[API] Error ${response.status}: ${error}`);
     throw new Error(`API error ${response.status}: ${error}`);
   }
 
@@ -45,7 +48,7 @@ export async function startIngest(
   languages: string[] = ["en"]
 ): Promise<IngestResponse> {
   return apiFetch<IngestResponse>(
-    "/tube-service/api/v1/content/ingest",
+    "/api/v1/content/ingest",
     {
       method: "POST",
       body: JSON.stringify({ url, languages }),
@@ -57,7 +60,7 @@ export async function getIngestProgress(
   sessionId: string
 ): Promise<IngestProgress> {
   return apiFetch<IngestProgress>(
-    `/tube-service/api/v1/content/sessions/${sessionId}/status`
+    `/api/v1/content/sessions/${sessionId}/status`
   );
 }
 
@@ -69,12 +72,7 @@ export function createProgressStream(
   onDone: (progress: IngestProgress) => void,
   onError: (error: string) => void
 ): EventSource {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-
-  // Note: EventSource doesn't support custom headers
-  // For SSE with auth, we'd need to use query param or a different approach
-  const url = `${API_BASE}/tube-service/api/v1/content/sessions/${sessionId}/stream`;
+  const url = `${TUBE_BASE}/api/v1/content/sessions/${sessionId}/stream`;
 
   const eventSource = new EventSource(url);
 
@@ -121,7 +119,7 @@ export async function sendChatMessage(
   contentSessionId?: string
 ): Promise<ChatResponse> {
   return apiFetch<ChatResponse>(
-    "/tube-service/api/v1/content/chat",
+    "/api/v1/content/chat",
     {
       method: "POST",
       body: JSON.stringify({ message, contentSessionId }),
@@ -133,7 +131,7 @@ export async function sendChatMessage(
 
 export async function listSessions(): Promise<ChatSession[]> {
   return apiFetch<ChatSession[]>(
-    "/tube-service/api/v1/content/sessions"
+    "/api/v1/content/sessions"
   );
 }
 
@@ -141,14 +139,14 @@ export async function getSession(
   sessionId: string
 ): Promise<ChatSession> {
   return apiFetch<ChatSession>(
-    `/tube-service/api/v1/content/sessions/${sessionId}`
+    `/api/v1/content/sessions/${sessionId}`
   );
 }
 
 export async function deleteSession(
   sessionId: string
 ): Promise<void> {
-  await apiFetch(`/tube-service/api/v1/content/sessions/${sessionId}`, {
+  await apiFetch(`/api/v1/content/sessions/${sessionId}`, {
     method: "DELETE",
   });
 }

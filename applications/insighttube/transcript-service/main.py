@@ -128,7 +128,23 @@ def extract_video_transcript(
     """Extract transcript for a single video."""
     try:
         ytt_api = YouTubeTranscriptApi()
-        transcript = ytt_api.fetch(video_id, languages=languages)
+        try:
+            transcript = ytt_api.fetch(video_id, languages=languages)
+        except Exception:
+            # Fallback: list available transcripts and use the first one that works
+            transcript_list = ytt_api.list(video_id)
+            available = list(transcript_list)
+            if not available:
+                raise Exception("No transcripts available for this video")
+            transcript = None
+            for t in available:
+                try:
+                    transcript = t.fetch()
+                    break
+                except Exception:
+                    continue
+            if transcript is None:
+                raise Exception("Could not fetch any available transcript")
 
         segments = [
             TranscriptSegment(

@@ -164,7 +164,10 @@ public class GeminiCompletionService implements CompletionService {
     }
 
     private String callGemini(String systemPrompt, String userMessage, PromptConfig.AppPromptConfig config) {
-        ensureConfigured();
+        if (apiKey == null || apiKey.isBlank()) {
+            log.debug("GEMINI_API_KEY not set — returning placeholder response");
+            return "[AI Platform] Gemini API key is not configured. Please set GEMINI_API_KEY to enable AI completions.";
+        }
 
         try {
             String url = API_BASE + "/models/" + config.getModel() + ":generateContent?key=" + apiKey;
@@ -219,9 +222,5 @@ public class GeminiCompletionService implements CompletionService {
         return headers;
     }
 
-    private void ensureConfigured() {
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("GEMINI_API_KEY not configured");
-        }
-    }
+
 }

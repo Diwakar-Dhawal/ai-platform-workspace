@@ -80,16 +80,18 @@ function pollProgress(
         clearInterval(interval);
         set({ isIngesting: false });
 
-        // If completed, the session will be available in the sessions list
-        if (progress.status === "COMPLETED") {
-          // Dispatch event so chat store can reload sessions
-          window.dispatchEvent(new CustomEvent("ingest-completed", {
-            detail: { sessionId },
-          }));
-        }
+        // Always dispatch so sidebar refreshes (completed OR failed)
+        window.dispatchEvent(new CustomEvent("ingest-completed", {
+          detail: { sessionId },
+        }));
       }
     } catch (e) {
       console.error("Failed to poll progress:", e);
+      // Don't stop polling on 404 — progress may not be initialized yet
+      if (e instanceof Error && e.message.includes("404")) {
+        console.log("Progress not yet available, retrying...");
+        return;
+      }
       clearInterval(interval);
       set({
         isIngesting: false,

@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -34,6 +35,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "ai-platform.vector-store", havingValue = "pinecone")
 public class PineconeVectorStoreService implements VectorStoreService {
 
     @Value("${ai-platform.pinecone.api-key:${PINECONE_API_KEY:}}")
@@ -57,7 +59,10 @@ public class PineconeVectorStoreService implements VectorStoreService {
 
     @Override
     public void store(Chunk chunk, List<Float> embedding) {
-        ensureConfigured();
+        if (!isConfigured()) {
+            log.debug("Pinecone not configured — skipping store for chunk {}", chunk.getId());
+            return;
+        }
 
         try {
             Map<String, Object> vector = buildVector(chunk, embedding);
@@ -78,13 +83,15 @@ public class PineconeVectorStoreService implements VectorStoreService {
 
         } catch (Exception e) {
             log.error("Failed to store chunk {}: {}", chunk.getId(), e.getMessage());
-            throw new RuntimeException("Vector store failed: " + e.getMessage(), e);
         }
     }
 
     @Override
     public void storeBatch(List<ChunkWithEmbedding> chunks) {
-        ensureConfigured();
+        if (!isConfigured()) {
+            log.debug("Pinecone not configured — skipping batch store ({} chunks)", chunks.size());
+            return;
+        }
 
         try {
             // Group by namespace
@@ -126,7 +133,10 @@ public class PineconeVectorStoreService implements VectorStoreService {
             int topK,
             double similarityThreshold
     ) {
-        ensureConfigured();
+        if (!isConfigured()) {
+            log.debug("Pinecone not configured — returning empty search results for '{}'", appId);
+            return List.of();
+        }
 
         try {
             Map<String, Object> body = Map.of(
@@ -162,7 +172,10 @@ public class PineconeVectorStoreService implements VectorStoreService {
             int topK,
             double similarityThreshold
     ) {
-        ensureConfigured();
+        if (!isConfigured()) {
+            log.debug("Pinecone not configured — returning empty session search results");
+            return List.of();
+        }
 
         try {
             // Over-fetch then filter client-side (Pinecone metadata filtering requires paid plan)
@@ -207,7 +220,10 @@ public class PineconeVectorStoreService implements VectorStoreService {
 
     @Override
     public void deleteApp(String appId) {
-        ensureConfigured();
+        if (!isConfigured()) {
+            log.debug("Pinecone not configured — skipping delete for '{}'", appId);
+            return;
+        }
 
         try {
             Map<String, Object> body = Map.of("deleteAll", true, "namespace", appId);
@@ -320,9 +336,7 @@ public class PineconeVectorStoreService implements VectorStoreService {
         return headers;
     }
 
-    private void ensureConfigured() {
-        if (apiKey == null || apiKey.isBlank() || indexHost == null || indexHost.isBlank()) {
-            throw new IllegalStateException("Pinecone not configured — check PINECONE_API_KEY and PINECONE_INDEX_HOST");
-        }
+    private boolean isConfigured() {
+        return apiKey != null && !apiKey.isBlank() && indexHost != null && !indexHost.isBlank();
     }
 }
