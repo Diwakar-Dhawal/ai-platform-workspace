@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
         source: "/api/v1/identity/:path*",
         destination: "http://localhost:8080/api/v1/identity/:path*",
       },
+      // Identity Service direct (for auth/login)
+      {
+        source: "/identity-service/:path*",
+        destination: "http://localhost:8081/identity-service/:path*",
+      },
     ];
   },
 

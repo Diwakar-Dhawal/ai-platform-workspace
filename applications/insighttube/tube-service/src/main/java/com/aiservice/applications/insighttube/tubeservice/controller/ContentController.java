@@ -5,7 +5,6 @@ import com.aiservice.applications.insighttube.tubeservice.service.ChatService;
 import com.aiservice.applications.insighttube.tubeservice.service.IngestionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +30,9 @@ public class ContentController {
     @Operation(summary = "Ingest YouTube content", description = "Extract transcript, chunk, embed, and store in vector database")
     public IngestResponse ingest(
             @Valid @RequestBody IngestRequest request,
-            @Nullable Authentication authentication
+            Authentication authentication
     ) {
-        UUID userId = getUserId(authentication);
+        UUID userId = UUID.fromString(authentication.getName());
         log.info("Ingest request from user {}: {}", userId, request.getUrl());
         return ingestionService.ingest(request, userId);
     }
@@ -42,29 +41,20 @@ public class ContentController {
     @Operation(summary = "Chat about content", description = "Ask questions about ingested YouTube content using RAG")
     public ChatResponse chat(
             @Valid @RequestBody ChatRequest request,
-            @Nullable Authentication authentication
+            Authentication authentication
     ) {
-        UUID userId = getUserId(authentication);
+        UUID userId = UUID.fromString(authentication.getName());
         return chatService.chat(request, userId);
     }
 
     @GetMapping("/sessions")
     @Operation(summary = "List content sessions", description = "Get all ingested content sessions for the current user")
-    public List<IngestionService.ContentSession> listSessions(@Nullable Authentication authentication) {
-        UUID userId = getUserId(authentication);
+    public List<IngestionService.ContentSession> listSessions(Authentication authentication) {
+        UUID userId = UUID.fromString(authentication.getName());
         return ingestionService.listSessions(userId);
     }
 
-    /**
-     * Extract user ID from JWT. Falls back to a dev user UUID when unauthenticated (dev mode).
-     */
-    private UUID getUserId(@Nullable Authentication authentication) {
-        if (authentication != null && authentication.getName() != null) {
-            return UUID.fromString(authentication.getName());
-        }
-        // Dev mode: return a fixed user ID so unauthenticated requests work
-        return UUID.fromString("00000000-0000-0000-0000-000000000001");
-    }
+
 
     @GetMapping("/sessions/{sessionId}")
     @Operation(summary = "Get content session", description = "Get details of a specific content session")

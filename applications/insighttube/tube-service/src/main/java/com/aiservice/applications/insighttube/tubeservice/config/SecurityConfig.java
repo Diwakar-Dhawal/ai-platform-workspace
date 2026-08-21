@@ -35,7 +35,6 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/health",
                                 "/actuator/**",
-                                "/api/v1/**",
                                 "/tube-service/health"
                         ).permitAll()
                         .anyRequest().authenticated()

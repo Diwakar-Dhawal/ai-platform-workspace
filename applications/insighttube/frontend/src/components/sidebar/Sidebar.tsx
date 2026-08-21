@@ -9,6 +9,7 @@ import {
   Search,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { useChatStore } from "@/stores/chatStore";
 import { useIngestStore } from "@/stores/ingestStore";
+import { useAuthStore } from "@/stores/authStore";
 import { IngestModal } from "@/components/ingest/IngestModal";
 
 export function Sidebar() {
@@ -23,6 +25,8 @@ export function Sidebar() {
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const removeSession = useChatStore((s) => s.removeSession);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const [showIngestModal, setShowIngestModal] = useState(false);
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState(false);
@@ -95,6 +99,29 @@ export function Sidebar() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-8 bg-white/5 border-white/10 text-white placeholder:text-white/40 pl-7 text-xs"
                 />
+              </div>
+            </div>
+
+            <Separator className="bg-white/10" />
+
+            {/* User info + Logout */}
+            <div className="px-3 pb-2">
+              <div className="flex items-center gap-2 rounded-md bg-white/5 px-2 py-1.5">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 text-[10px] text-blue-400 font-medium">
+                  {user?.username?.[0]?.toUpperCase() || "U"}
+                </div>
+                <span className="text-xs text-white/60 truncate flex-1">
+                  {user?.username || "User"}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={logout}
+                  className="h-5 w-5 text-white/40 hover:text-white hover:bg-white/10"
+                  title="Sign out"
+                >
+                  <LogOut className="h-3 w-3" />
+                </Button>
               </div>
             </div>
 

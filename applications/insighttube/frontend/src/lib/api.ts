@@ -9,6 +9,7 @@ import type {
 
 // All paths use /tube-service prefix which maps to context-path on Tube Service
 const TUBE_BASE = "/tube-service";
+const IDENTITY_BASE = "/identity-service";
 
 async function apiFetch<T>(
   path: string,
@@ -17,7 +18,7 @@ async function apiFetch<T>(
   const url = `${TUBE_BASE}${path}`;
 
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -39,6 +40,49 @@ async function apiFetch<T>(
   }
 
   return response.json();
+}
+
+// ─── Auth ───
+
+interface AuthLoginResponse {
+  status: string;
+  message: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresAt: string;
+    refreshTokenExpiresAt: string;
+    user: {
+      id: string;
+      username: string;
+      email: string;
+      roles: string[];
+    };
+  };
+}
+
+export async function login(
+  email: string,
+  password: string,
+  clientId: string
+): Promise<AuthLoginResponse["data"]> {
+  const response = await fetch(`${IDENTITY_BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, clientId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || `Login failed (${response.status})`);
+  }
+
+  const body: AuthLoginResponse = await response.json();
+  if (body.status !== "SUCCESS") {
+    throw new Error(body.message || "Login failed");
+  }
+
+  return body.data;
 }
 
 // ─── Ingest ───
