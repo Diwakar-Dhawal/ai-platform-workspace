@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/stores/chatStore";
@@ -11,22 +11,15 @@ export function ChatInput() {
   const sendingMessage = useChatStore((s) => s.sendingMessage);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(
-        textareaRef.current.scrollHeight,
-        200
-      )}px`;
-    }
-  }, [input]);
-
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (!input.trim() || sendingMessage) return;
     sendMessage(input.trim());
     setInput("");
-  };
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  }, [input, sendingMessage, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -35,17 +28,25 @@ export function ChatInput() {
     }
   };
 
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    // Auto-resize but cap at max height
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="relative rounded-2xl border border-white/15 bg-[#1e1e1e] focus-within:border-blue-500/50 transition-colors">
         <textarea
           ref={textareaRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInput}
           onKeyDown={handleKeyDown}
           placeholder="Ask about this video..."
           rows={1}
-          className="w-full resize-none bg-transparent px-4 py-3 pr-12 text-sm text-white placeholder:text-white/40 focus:outline-none"
+          className="w-full resize-none bg-transparent px-4 py-3 pr-12 text-sm text-white placeholder:text-white/40 focus:outline-none min-h-[44px] max-h-[160px]"
           disabled={sendingMessage}
         />
         <Button

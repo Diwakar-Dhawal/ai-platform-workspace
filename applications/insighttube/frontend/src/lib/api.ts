@@ -194,3 +194,13 @@ export async function deleteSession(
     method: "DELETE",
   });
 }
+
+export async function renameSession(
+  sessionId: string,
+  title: string
+): Promise<void> {
+  await apiFetch(`/api/v1/content/sessions/${sessionId}/rename`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}

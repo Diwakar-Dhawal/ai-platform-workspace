@@ -81,6 +81,35 @@ public class ContentController {
         return progress;
     }
 
+    @PatchMapping("/sessions/{sessionId}/rename")
+    @Operation(summary = "Rename content session", description = "Update the display title of a content session")
+    public Map<String, String> renameSession(
+            @PathVariable UUID sessionId,
+            @RequestBody Map<String, String> body
+    ) {
+        String title = body.get("title");
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title cannot be empty");
+        }
+        IngestionService.ContentSession session = ingestionService.getSession(sessionId);
+        if (session == null) {
+            throw new jakarta.persistence.EntityNotFoundException("Session not found: " + sessionId);
+        }
+        // Records are immutable — create a new one with the updated title
+        IngestionService.ContentSession updated = new IngestionService.ContentSession(
+                session.id(),
+                title.trim(),
+                session.sourceUrl(),
+                session.contentType(),
+                session.chunkCount(),
+                session.videoCount(),
+                session.status(),
+                session.userId()
+        );
+        ingestionService.updateSession(sessionId, updated);
+        return Map.of("status", "renamed", "sessionId", sessionId.toString(), "title", title.trim());
+    }
+
     @DeleteMapping("/sessions/{sessionId}")
     @Operation(summary = "Delete content session", description = "Remove ingested content and its vectors")
     public Map<String, String> deleteSession(@PathVariable UUID sessionId) {

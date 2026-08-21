@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   MessageSquarePlus,
   Trash2,
@@ -10,6 +10,10 @@ import {
   Menu,
   X,
   LogOut,
+  Pencil,
+  Check,
+  User,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,11 +29,49 @@ export function Sidebar() {
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const removeSession = useChatStore((s) => s.removeSession);
+  const renameSession = useChatStore((s) => s.renameSession);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [showIngestModal, setShowIngestModal] = useState(false);
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus rename input
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfile(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const startRename = (sessionId: string, currentTitle: string) => {
+    setRenamingId(sessionId);
+    setRenameValue(currentTitle);
+  };
+
+  const commitRename = () => {
+    if (renamingId && renameValue.trim()) {
+      renameSession(renamingId, renameValue.trim());
+    }
+    setRenamingId(null);
+    setRenameValue("");
+  };
 
   // Group sessions by sourceUrl (video)
   const grouped = sessions
@@ -104,25 +146,52 @@ export function Sidebar() {
 
             <Separator className="bg-white/10" />
 
-            {/* User info + Logout */}
-            <div className="px-3 pb-2">
-              <div className="flex items-center gap-2 rounded-md bg-white/5 px-2 py-1.5">
+            {/* Profile dropdown */}
+            <div className="px-3 py-2" ref={profileRef}>
+              <button
+                onClick={() => setShowProfile(!showProfile)}
+                className="flex items-center gap-2 w-full rounded-md bg-white/5 px-2 py-1.5 hover:bg-white/10 transition-colors"
+              >
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 text-[10px] text-blue-400 font-medium">
                   {user?.username?.[0]?.toUpperCase() || "U"}
                 </div>
-                <span className="text-xs text-white/60 truncate flex-1">
+                <span className="text-xs text-white/60 truncate flex-1 text-left">
                   {user?.username || "User"}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={logout}
-                  className="h-5 w-5 text-white/40 hover:text-white hover:bg-white/10"
-                  title="Sign out"
-                >
-                  <LogOut className="h-3 w-3" />
-                </Button>
-              </div>
+                <ChevronDown
+                  className={`h-3 w-3 text-white/40 transition-transform ${
+                    showProfile ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Profile dropdown panel */}
+              {showProfile && (
+                <div className="mt-1 rounded-md bg-[#252525] border border-white/10 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-white/40" />
+                    <div>
+                      <p className="text-xs text-white/80 font-medium">
+                        {user?.username}
+                      </p>
+                      <p className="text-[10px] text-white/40">{user?.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-white/30">
+                    Roles: {user?.roles?.join(", ") || "USER"}
+                  </div>
+                  <Separator className="bg-white/10" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={logout}
+                    className="w-full justify-start gap-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs h-7"
+                  >
+                    <LogOut className="h-3 w-3" />
+                    Sign out
+                  </Button>
+                </div>
+              )}
             </div>
 
             <Separator className="bg-white/10" />
@@ -143,7 +212,11 @@ export function Sidebar() {
                   {group.sessions.map((session) => (
                     <div
                       key={session.id}
-                      onClick={() => setActiveSession(session.id)}
+                      onClick={() => {
+                        if (renamingId !== session.id) {
+                          setActiveSession(session.id);
+                        }
+                      }}
                       className={`group flex items-center gap-2 rounded-md px-2 py-1.5 cursor-pointer transition-colors ${
                         activeSessionId === session.id
                           ? "bg-white/15 text-white"
@@ -151,20 +224,51 @@ export function Sidebar() {
                       }`}
                     >
                       <Play className="h-3 w-3 shrink-0" />
-                      <span className="text-xs truncate flex-1">
-                        {session.title || "Chat"}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 opacity-0 group-hover:opacity-100 text-white/40 hover:text-red-400"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeSession(session.id);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+
+                      {renamingId === session.id ? (
+                        <input
+                          ref={renameInputRef}
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename();
+                            if (e.key === "Escape") setRenamingId(null);
+                          }}
+                          onBlur={commitRename}
+                          className="flex-1 text-xs bg-white/10 rounded px-1 py-0.5 text-white outline-none border border-blue-500/50"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span className="text-xs truncate flex-1">
+                          {session.title || "Chat"}
+                        </span>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {renamingId !== session.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startRename(session.id, session.title || "Chat");
+                            }}
+                            className="p-0.5 rounded text-white/40 hover:text-white hover:bg-white/10"
+                            title="Rename"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeSession(session.id);
+                          }}
+                          className="p-0.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

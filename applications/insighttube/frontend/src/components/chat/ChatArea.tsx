@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { MessageSquare, Video } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect, useRef, useCallback } from "react";
+import { Video } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { Message } from "./Message";
 import { ChatInput } from "./ChatInput";
@@ -12,13 +11,25 @@ export function ChatArea() {
   const messages = useChatStore((s) => s.messages);
   const sendingMessage = useChatStore((s) => s.sendingMessage);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScroll = useRef(true);
 
   const activeMessages = activeSessionId ? messages[activeSessionId] || [] : [];
 
-  // Auto-scroll to bottom on new messages
+  // Track if user scrolled up (disable auto-scroll)
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    shouldAutoScroll.current = atBottom;
+  }, []);
+
+  // Auto-scroll to bottom on new messages (only if user is at bottom)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (shouldAutoScroll.current && scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [activeMessages.length, sendingMessage]);
 
@@ -56,10 +67,14 @@ export function ChatArea() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[#0d0d0d]">
-      {/* Messages */}
-      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-        <div className="mx-auto max-w-3xl py-6 space-y-6">
+    <div className="flex flex-1 flex-col bg-[#0d0d0d] min-h-0">
+      {/* Messages — scrollable container */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+      >
+        <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
           {activeMessages.map((msg) => (
             <Message key={msg.id} message={msg} />
           ))}
@@ -74,11 +89,14 @@ export function ChatArea() {
               <span className="text-xs">Thinking...</span>
             </div>
           )}
-        </div>
-      </ScrollArea>
 
-      {/* Input */}
-      <div className="border-t border-white/10 bg-[#0d0d0d] p-4">
+          {/* Bottom spacer so last message isn't hidden behind input */}
+          <div className="h-2" />
+        </div>
+      </div>
+
+      {/* Input — fixed at bottom, never jumps */}
+      <div className="shrink-0 border-t border-white/10 bg-[#0d0d0d] p-4">
         <ChatInput />
       </div>
     </div>

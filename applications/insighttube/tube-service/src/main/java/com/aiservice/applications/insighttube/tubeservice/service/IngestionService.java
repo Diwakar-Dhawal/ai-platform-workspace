@@ -228,6 +228,13 @@ public class IngestionService {
     }
 
     /**
+     * Replace a content session (e.g., for rename).
+     */
+    public void updateSession(UUID sessionId, ContentSession updated) {
+        sessions.put(sessionId, updated);
+    }
+
+    /**
      * Delete a content session and its progress.
      */
     public void deleteSession(UUID sessionId) {
