@@ -52,6 +52,7 @@ export const useIngestStore = create<IngestState>((set, get) => ({
       // Set up a polling fallback — SSE might not connect immediately after ingest starts
       // We poll aggressively at first, then less frequently once SSE is connected
       let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+      let sseSetupTimeout: ReturnType<typeof setTimeout> | null = null;
       let sseConnected = false;
 
       const pollProgress = async () => {
@@ -72,6 +73,10 @@ export const useIngestStore = create<IngestState>((set, get) => ({
       };
 
       const cleanup = () => {
+        if (sseSetupTimeout) {
+          clearTimeout(sseSetupTimeout);
+          sseSetupTimeout = null;
+        }
         if (eventSource) {
           eventSource.close();
           eventSource = null;
@@ -92,7 +97,7 @@ export const useIngestStore = create<IngestState>((set, get) => ({
       fallbackInterval = setInterval(pollProgress, 500);
 
       // Wait 1 second then try SSE — backend needs a moment to set up the stream
-      setTimeout(() => {
+      sseSetupTimeout = setTimeout(() => {
         if (sseConnected || get().currentSessionId !== sessionId) return;
 
         try {
@@ -141,6 +146,10 @@ export const useIngestStore = create<IngestState>((set, get) => ({
   },
 
   stopIngest: () => {
+    if (activeCleanup) {
+      activeCleanup();
+      activeCleanup = null;
+    }
     set({
       isIngesting: false,
       currentSessionId: null,

@@ -67,6 +67,12 @@ export function LoginPage() {
     setView(newView);
     setLocalError("");
     clearError();
+    // Reset shared form fields to prevent stale values across views
+    setEmail("");
+    setPassword("");
+    setUsername("");
+    setConfirmPassword("");
+    setForgotEmail("");
   };
 
   const displayError = localError || error;
