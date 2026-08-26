@@ -36,28 +36,30 @@ export function ChatArea() {
   // No active session — show welcome screen
   if (!activeSessionId) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-[#0d0d0d]">
+      <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-[#0c0c0e] to-[#101014]">
         <div className="text-center">
-          <Video className="h-12 w-12 text-red-500/60 mx-auto mb-4" />
-          <h2 className="text-xl font-medium text-white/80 mb-2">
+          <div className="rounded-2xl bg-gradient-to-br from-rose-500/10 to-orange-500/10 p-5 border border-rose-500/5 mx-auto mb-4 w-fit">
+            <Video className="h-10 w-10 text-rose-400/80" />
+          </div>
+          <h2 className="text-xl font-semibold text-white/80 mb-2 tracking-tight">
             InsightTube
           </h2>
-          <p className="text-sm text-white/40 max-w-md">
+          <p className="text-sm text-slate-500 max-w-md leading-relaxed">
             Paste a YouTube link to start chatting with any video, playlist, or
             channel. Ask questions, find timestamps, and explore content
             conversationally.
           </p>
-          <div className="mt-6 flex flex-col gap-2 text-xs text-white/30">
+          <div className="mt-8 flex flex-col gap-2.5 text-xs text-slate-600">
             <div className="flex items-center gap-2 justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500/60" />
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500/50" />
               &quot;What does this video say about authentication?&quot;
             </div>
             <div className="flex items-center gap-2 justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500/60" />
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500/50" />
               &quot;Find the part where they discuss database design&quot;
             </div>
             <div className="flex items-center gap-2 justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500/60" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500/50" />
               &quot;Summarize the key takeaways from this lecture&quot;
             </div>
           </div>
@@ -67,7 +69,7 @@ export function ChatArea() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[#0d0d0d] min-h-0">
+    <div className="flex flex-1 flex-col bg-[#0c0c0e] min-h-0">
       {/* Messages — scrollable container */}
       <div
         ref={scrollRef}
@@ -80,11 +82,11 @@ export function ChatArea() {
           ))}
 
           {sendingMessage && (
-            <div className="flex items-center gap-2 text-white/40">
+            <div className="flex items-center gap-2 text-white/30">
               <div className="flex gap-1">
-                <span className="w-2 h-2 rounded-full bg-white/40 animate-bounce [animation-delay:0ms]" />
-                <span className="w-2 h-2 rounded-full bg-white/40 animate-bounce [animation-delay:150ms]" />
-                <span className="w-2 h-2 rounded-full bg-white/40 animate-bounce [animation-delay:300ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400/60 animate-bounce [animation-delay:0ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400/60 animate-bounce [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60 animate-bounce [animation-delay:300ms]" />
               </div>
               <span className="text-xs">Thinking...</span>
             </div>
@@ -96,7 +98,7 @@ export function ChatArea() {
       </div>
 
       {/* Input — fixed at bottom, never jumps */}
-      <div className="shrink-0 border-t border-white/10 bg-[#0d0d0d] p-4">
+      <div className="shrink-0 border-t border-white/5 bg-[#0c0c0e] p-4">
         <ChatInput />
       </div>
     </div>

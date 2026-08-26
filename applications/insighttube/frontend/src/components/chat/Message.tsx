@@ -18,7 +18,7 @@ export function Message({ message }: MessageProps) {
       {/* Avatar (AI only) */}
       {!isUser && (
         <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-          <AvatarFallback className="bg-blue-600 text-white text-xs">
+          <AvatarFallback className="bg-gradient-to-br from-rose-500/30 to-orange-500/30 text-rose-300 text-xs border border-rose-500/10">
             <Bot className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
@@ -27,8 +27,8 @@ export function Message({ message }: MessageProps) {
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-3 ${
           isUser
-            ? "bg-blue-600 text-white"
-            : "bg-[#1e1e1e] text-white/90 border border-white/5"
+            ? "bg-gradient-to-br from-rose-600 to-orange-600 text-white"
+            : "bg-[#18181c] text-white/90 border border-white/5"
         }`}
       >
         {/* Message content — render markdown for AI, plain for user */}
@@ -52,7 +52,7 @@ export function Message({ message }: MessageProps) {
         {/* Timestamp */}
         <div
           className={`mt-2 text-[10px] ${
-            isUser ? "text-white/60" : "text-white/30"
+            isUser ? "text-white/50" : "text-white/25"
           }`}
         >
           {new Date(message.timestamp).toLocaleTimeString([], {
@@ -65,7 +65,7 @@ export function Message({ message }: MessageProps) {
       {/* Avatar (User only) */}
       {isUser && (
         <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-          <AvatarFallback className="bg-white/20 text-white text-xs">
+          <AvatarFallback className="bg-white/10 text-white/70 text-xs border border-white/5">
             <User className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
@@ -75,13 +75,10 @@ export function Message({ message }: MessageProps) {
 }
 
 function TimestampChip({ source }: { source: TimestampSource }) {
-  // Display-only badge — video ID is not available in the source object,
-  // so we can't construct a clickable YouTube link. Citations in the
-  // text itself (e.g. [Video at 5:30]) serve as references.
   return (
     <Badge
       variant="outline"
-      className="bg-blue-500/10 border-blue-500/30 text-blue-400 text-xs gap-1"
+      className="bg-rose-500/10 border-rose-500/20 text-rose-300 text-xs gap-1"
     >
       ▶ {source.timestamp}
     </Badge>

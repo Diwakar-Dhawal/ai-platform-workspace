@@ -2,6 +2,11 @@ import { create } from "zustand";
 import type { IngestProgress } from "@/lib/types";
 import * as api from "@/lib/api";
 
+// Module-level cleanup — avoids the chain-of-patched-resets bug.
+// Each call to startIngest overwrites this, so only the latest resources
+// are cleaned up. Previous resources are cleaned up first.
+let activeCleanup: (() => void) | null = null;
+
 interface IngestState {
   // Current ingest
   isIngesting: boolean;
@@ -35,8 +40,98 @@ export const useIngestStore = create<IngestState>((set, get) => ({
 
       set({ currentSessionId: sessionId });
 
-      // Start polling for progress
-      pollProgress(sessionId, set, get);
+      // Clean up any previous ingest resources (prevents leak on repeated calls)
+      if (activeCleanup) {
+        activeCleanup();
+        activeCleanup = null;
+      }
+
+      // Use SSE stream for real-time progress updates
+      let eventSource: EventSource | null = null;
+
+      // Set up a polling fallback — SSE might not connect immediately after ingest starts
+      // We poll aggressively at first, then less frequently once SSE is connected
+      let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+      let sseConnected = false;
+
+      const pollProgress = async () => {
+        try {
+          const progress = await api.getIngestProgress(sessionId);
+          set({ progress });
+
+          if (progress.status === "COMPLETED" || progress.status === "FAILED") {
+            cleanup();
+            set({ isIngesting: false });
+            window.dispatchEvent(new CustomEvent("ingest-completed", {
+              detail: { sessionId },
+            }));
+          }
+        } catch {
+          // Progress may not exist yet, retry
+        }
+      };
+
+      const cleanup = () => {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        if (fallbackInterval) {
+          clearInterval(fallbackInterval);
+          fallbackInterval = null;
+        }
+        if (activeCleanup === cleanup) {
+          activeCleanup = null;
+        }
+      };
+
+      // Register as the active cleanup so reset() can call it
+      activeCleanup = cleanup;
+
+      // Start with fast polling (every 500ms) until SSE connects
+      fallbackInterval = setInterval(pollProgress, 500);
+
+      // Wait 1 second then try SSE — backend needs a moment to set up the stream
+      setTimeout(() => {
+        if (sseConnected || get().currentSessionId !== sessionId) return;
+
+        try {
+          eventSource = api.createProgressStream(
+            sessionId,
+            // onProgress — real-time update
+            (progress) => {
+              sseConnected = true;
+              set({ progress });
+
+              // Once SSE is connected, slow down the fallback polling
+              if (fallbackInterval) {
+                clearInterval(fallbackInterval);
+                fallbackInterval = setInterval(pollProgress, 5000);
+              }
+            },
+            // onDone
+            (progress) => {
+              set({ progress, isIngesting: false });
+              cleanup();
+              window.dispatchEvent(new CustomEvent("ingest-completed", {
+                detail: { sessionId },
+              }));
+            },
+            // onError
+            (errorMsg) => {
+              // If SSE fails, keep polling — it's our fallback
+              console.warn("SSE stream error, falling back to polling:", errorMsg);
+              if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+              }
+            }
+          );
+        } catch {
+          // SSE setup failed, keep polling
+        }
+      }, 1000);
+
     } catch (e) {
       set({
         isIngesting: false,
@@ -54,6 +149,10 @@ export const useIngestStore = create<IngestState>((set, get) => ({
   },
 
   reset: () => {
+    if (activeCleanup) {
+      activeCleanup();
+      activeCleanup = null;
+    }
     set({
       isIngesting: false,
       currentSessionId: null,
@@ -63,40 +162,3 @@ export const useIngestStore = create<IngestState>((set, get) => ({
     });
   },
 }));
-
-// Poll progress every 2 seconds
-function pollProgress(
-  sessionId: string,
-  set: (partial: Partial<IngestState>) => void,
-  get: () => IngestState
-) {
-  const interval = setInterval(async () => {
-    try {
-      const progress = await api.getIngestProgress(sessionId);
-      set({ progress });
-
-      // Stop polling when done
-      if (progress.status === "COMPLETED" || progress.status === "FAILED") {
-        clearInterval(interval);
-        set({ isIngesting: false });
-
-        // Always dispatch so sidebar refreshes (completed OR failed)
-        window.dispatchEvent(new CustomEvent("ingest-completed", {
-          detail: { sessionId },
-        }));
-      }
-    } catch (e) {
-      console.error("Failed to poll progress:", e);
-      // Don't stop polling on 404 — progress may not be initialized yet
-      if (e instanceof Error && e.message.includes("404")) {
-        console.log("Progress not yet available, retrying...");
-        return;
-      }
-      clearInterval(interval);
-      set({
-        isIngesting: false,
-        error: "Lost connection to server",
-      });
-    }
-  }, 2000);
-}

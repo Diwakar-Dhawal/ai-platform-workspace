@@ -6,6 +6,7 @@ interface User {
   username: string;
   email: string;
   roles: string[];
+  emailVerified: boolean;
 }
 
 interface AuthState {
@@ -17,8 +18,10 @@ interface AuthState {
   error: string | null;
 
   login: (email: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   loadFromStorage: () => void;
+  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -51,6 +54,33 @@ export const useAuthStore = create<AuthState>((set) => ({
       return true;
     } catch (e) {
       const message = e instanceof Error ? e.message : "Login failed";
+      set({ isLoading: false, error: message });
+      return false;
+    }
+  },
+
+  register: async (username: string, email: string, password: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.register(username, email, password, "insighttube");
+      const { accessToken, refreshToken, user } = response;
+
+      // Store in localStorage
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      set({
+        token: accessToken,
+        refreshToken,
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+      return true;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Registration failed";
       set({ isLoading: false, error: message });
       return false;
     }
@@ -91,4 +121,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     }
   },
+
+  clearError: () => set({ error: null }),
 }));

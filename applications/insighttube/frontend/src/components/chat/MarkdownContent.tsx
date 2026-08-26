@@ -205,7 +205,7 @@ function renderInline(text: string): React.ReactNode[] {
 
     if (earliest.type === "bold") {
       parts.push(
-        <strong key={key++} className="font-semibold text-white">
+        <strong key={key++} className="font-semibold text-white/95">
           {earliest.match![1]}
         </strong>
       );
@@ -225,7 +225,7 @@ function renderInline(text: string): React.ReactNode[] {
           href={earliest.match![2]}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-400 underline hover:text-blue-300"
+          className="text-rose-400 underline hover:text-rose-300"
         >
           {earliest.match![1]}
         </a>

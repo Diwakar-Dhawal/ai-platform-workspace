@@ -28,10 +28,19 @@ async function apiFetch<T>(
 
   console.log(`[API] ${options?.method || "GET"} ${url}`);
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (e) {
+    // Network error — likely offline
+    if (e instanceof TypeError && e.message.includes("fetch")) {
+      throw new Error("You appear to be offline. Please check your internet connection.");
+    }
+    throw e;
+  }
 
   if (!response.ok) {
     const error = await response.text();
@@ -71,6 +80,7 @@ interface AuthLoginResponse {
       username: string;
       email: string;
       roles: string[];
+      emailVerified: boolean;
     };
   };
 }
@@ -80,11 +90,19 @@ export async function login(
   password: string,
   clientId: string
 ): Promise<AuthLoginResponse["data"]> {
-  const response = await fetch(`${IDENTITY_BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, clientId }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${IDENTITY_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, clientId }),
+    });
+  } catch (e) {
+    if (e instanceof TypeError && e.message.includes("fetch")) {
+      throw new Error("You appear to be offline. Please check your internet connection.");
+    }
+    throw e;
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -97,6 +115,63 @@ export async function login(
   }
 
   return body.data;
+}
+
+export async function register(
+  username: string,
+  email: string,
+  password: string,
+  clientId: string
+): Promise<AuthLoginResponse["data"]> {
+  let response: Response;
+  try {
+    response = await fetch(`${IDENTITY_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password, clientId }),
+    });
+  } catch (e) {
+    if (e instanceof TypeError && e.message.includes("fetch")) {
+      throw new Error("You appear to be offline. Please check your internet connection.");
+    }
+    throw e;
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || `Registration failed (${response.status})`);
+  }
+
+  const body: AuthLoginResponse = await response.json();
+  if (body.status !== "SUCCESS") {
+    throw new Error(body.message || "Registration failed");
+  }
+
+  return body.data;
+}
+
+export async function forgotPassword(
+  email: string,
+  clientId: string
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${IDENTITY_BASE}/auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, clientId }),
+    });
+  } catch (e) {
+    if (e instanceof TypeError && e.message.includes("fetch")) {
+      throw new Error("You appear to be offline. Please check your internet connection.");
+    }
+    throw e;
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || `Request failed (${response.status})`);
+  }
 }
 
 // ─── Ingest ───
